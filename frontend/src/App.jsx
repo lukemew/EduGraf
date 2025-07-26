@@ -1,19 +1,13 @@
 import { useState } from "react";
+import Navbar from "./components/Navbar/Navbar";
+import Home from "./pages/Home/Home";
 
 import "./App.css";
 
 function App() {
   return (
     <div>
-      <header>
-        <img src="" alt="Logo do Edugraf" />
-      </header>
-      <div className="banner">
-        <div></div>
-        <img src="" alt="" />
-      </div>
-      <div className="opcoes"></div>
-      <footer></footer>
+      <Navbar />
     </div>
   );
 }

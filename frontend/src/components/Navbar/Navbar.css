@@ -1,0 +1,32 @@
+/* Navbar.css */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--cor-primaria);
+  padding: 16px 32px;
+  color: white;
+}
+
+.navbar img {
+  height: 60px;
+}
+
+.navbar ul {
+  display: flex;
+  gap: 5rem;
+  list-style: none;
+  margin: 0;
+  padding-right: 6rem;
+}
+
+.navbar a {
+  color: white;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s;
+}
+
+.navbar a:hover {
+  color: #1abc9c;
+}
