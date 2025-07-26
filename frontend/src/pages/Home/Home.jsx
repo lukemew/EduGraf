@@ -1,18 +1,12 @@
 import Logo from "../../assets/logo.png";
-import Ilustracao from "../../assets/Ilustracao.png";
-import Ilustracao2 from "../../assets/ilustracao2.png";
+
+import Navbar from "../../components/Navbar/Navbar";
 
 const Home = () => {
   return (
     <div>
       <header>
-        <img src={Logo} alt="Logo do Edugraf" />
-        <div>
-          <a href="">Início</a>
-          <a href="">Dicas</a>
-          <a href="">Tabelas</a>
-          <a href="">Gráficos</a>
-        </div>
+        <Navbar />
       </header>
       <div className="banner">
         <div>

@@ -1,0 +1,28 @@
+.banner {
+  display: flex;
+  background-color: var(--cor-primaria-de-fundo);
+  height: 20rem;
+  justify-content: space-evenly;
+}
+
+.banner h2 {
+  font-size: 2.4rem;
+  color: var(--cor-primaria);
+  margin: 0;
+}
+
+.banner p {
+  font-size: 1.2rem;
+  color: var(--cor-primaria);
+}
+
+.banner-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.banner img {
+  padding: 1rem;
+}
