@@ -5,3 +5,7 @@
   --texto-escuro: #333333;
   --cor-primaria-de-fundo: rgba(22, 91, 112, 0.09);
 }
+.container {
+  position: relative;
+  padding-bottom: 18rem; /* equivalente à altura + margem do botão */
+}
