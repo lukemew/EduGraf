@@ -1,0 +1,36 @@
+.button a {
+  position: absolute;
+  border: 6px solid var(--cor-secundaria);
+  border-radius: 12px;
+  text-decoration: none;
+  padding: 6rem;
+  font-weight: bold;
+  text-align: center;
+  width: 14rem;
+  font-size: 2rem;
+  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.4);
+  transition: transform 0.3s ease;
+}
+
+.button {
+  border-radius: 6px;
+}
+
+.filled {
+  background-color: var(--cor-secundaria);
+  color: var(--texto-claro);
+}
+
+.filled:hover {
+  color: rgb(172, 170, 194);
+  transform: scale(1.05);
+}
+
+.transparent {
+  color: var(--cor-primaria);
+}
+
+.transparent:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+  transform: scale(1.05);
+}
