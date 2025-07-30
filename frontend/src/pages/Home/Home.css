@@ -1,0 +1,15 @@
+.home_container {
+  display: flex;
+  justify-content: center;
+  position: relative;
+  padding: 2rem 10rem 10rem 10rem;
+  gap: 2rem;
+}
+
+.home_main h2 {
+  padding-top: 6rem;
+  display: flex;
+  justify-content: center;
+  font-size: 2rem;
+  color: var(--cor-primaria);
+}

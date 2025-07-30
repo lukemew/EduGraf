@@ -1,11 +1,10 @@
-import Select from "./components/Select/Select";
-
 import "./App.css";
+import Home from "./pages/Home/Home.jsx";
 
 function App() {
   return (
     <div>
-      <Select></Select>
+      <Home />
     </div>
   );
 }
