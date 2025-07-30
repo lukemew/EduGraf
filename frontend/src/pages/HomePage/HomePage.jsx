@@ -1,10 +1,10 @@
-import "./Home.css";
+import "./HomePage.css";
 import Navbar from "../../components/Navbar/Navbar";
 import Banner from "../../components/Banner/Banner";
 import Button from "../../components/Button/Button";
 import Tips from "../../components/Dicks/Tips";
 
-const Home = () => {
+const HomePage = () => {
   return (
     <div>
       <header>
@@ -33,4 +33,4 @@ const Home = () => {
   );
 };
 
-export default Home;
+export default HomePage;

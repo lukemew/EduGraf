@@ -1,10 +1,15 @@
 import "./App.css";
-import Home from "./pages/Home/Home.jsx";
+import HomePage from "./pages/HomePage/HomePage";
+import TabelasPage from "./pages/TabelasPage/TabelasPage";
+import { Routes, Route } from "react-router-dom";
 
 function App() {
   return (
     <div>
-      <Home />
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/TabelasPage" element={<TabelasPage />} />
+      </Routes>
     </div>
   );
 }
