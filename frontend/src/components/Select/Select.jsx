@@ -1,6 +1,6 @@
 import "./select.css";
 
-const Select = () => {
+const Select = ({ value }) => {
   return (
     <div>
       <select className="select" name="Seleção de polos">

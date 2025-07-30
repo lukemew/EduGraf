@@ -1,0 +1,9 @@
+.select_container--upload {
+  display: flex;
+  align-items: end;
+  gap: 3rem;
+}
+
+.upload_button {
+  width: 10%;
+}

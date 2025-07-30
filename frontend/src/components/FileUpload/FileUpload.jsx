@@ -1,13 +1,20 @@
 import { useState } from "react";
 import "./FileUpload.css";
 
-const FileUpload = () => {
-  const [selectedFile, setSelectedFile] = useState(null);
+const FileUpload = ({ onFileSelect }) => {
+  const [fileName, setFileName] = useState("Nenhum arquivo selecionado");
+  const [isError, setIsError] = useState(true);
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
     if (file) {
-      setSelectedFile(file);
+      setFileName(file.name);
+      setIsError(false);
+      onFileSelect(file); // 👈 AQUI! Chama a função do pai com o arquivo selecionado
+    } else {
+      setFileName("Nenhum arquivo selecionado");
+      setIsError(true);
+      onFileSelect(null); // Informa o pai que nenhum arquivo está selecionado
     }
   };
 
@@ -25,8 +32,8 @@ const FileUpload = () => {
         Enviar arquivo
       </label>
 
-      <span className={`file-name ${!selectedFile ? "no-file" : ""}`}>
-        {selectedFile ? selectedFile.name : "Nenhum arquivo selecionado"}
+      <span className={`file-name ${!isError ? "no-file" : ""}`}>
+        {fileName}
       </span>
     </div>
   );

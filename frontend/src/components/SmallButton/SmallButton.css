@@ -1,13 +1,13 @@
 .small_button a {
-  position: absolute;
+  display: inline-block;
   border: 6px solid var(--cor-secundaria);
   border-radius: 12px;
   text-decoration: none;
-  padding: 4rem;
+  padding: 0.8rem;
   font-weight: bold;
   text-align: center;
-  width: 14rem;
-  font-size: 2rem;
+  width: 10rem;
+  font-size: 1rem;
   box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.4);
   transition: transform 0.3s ease;
   cursor: pointer;
