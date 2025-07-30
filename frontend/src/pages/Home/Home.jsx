@@ -8,21 +8,18 @@ const Home = () => {
       <header>
         <Navbar />
       </header>
-      <div className="banner">
+      <main>
         <Banner />
-      </div>
-      <div className="opcoes">
-        <h2>O que você deseja fazer primeiro?</h2>
-        <div className="container-opcoes">
-          <a href="">Gerar tabelas do Polo</a>
-          <a href="">Gerar gráficos do Polo</a>
+        <div className="container">
+          <Button
+            filled={false}
+            link={""}
+            description={"Gerar tabelas do polo"}
+          />
         </div>
-      </div>
+      </main>
       <footer>
-        <h2>Dicas</h2>
-        <div className="container-footer">
-          <img src="" alt="Imagem ilustrativa do tópico de dicas" />
-        </div>
+        <Tips pagina={1} />
       </footer>
     </div>
   );

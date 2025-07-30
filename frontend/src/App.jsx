@@ -6,21 +6,12 @@ import Tips from "./components/Dicks/Tips";
 import Home from "./pages/Home/Home";
 
 import "./App.css";
+import SmallButton from "./components/SmallButton/SmallButton";
 
 function App() {
   return (
     <div>
-      <Navbar />
-      <Banner />
-      <div className="container">
-        <Button
-          filled={false}
-          link={""}
-          description={"Gerar tabelas do polo"}
-        />
-      </div>
-
-      <Tips pagina={1} />
+      <SmallButton filled={true} description={"Salvar Tabela"} />
     </div>
   );
 }

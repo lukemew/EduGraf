@@ -29,7 +29,7 @@ const Tips = ({ pagina }) => {
   }
 
   return (
-    <div className="tips">
+    <div id="dicas" className="tips">
       <h2>Dicas</h2>
       <div className="tips-container">
         <img src={Ilustracao2} alt="Ilustração da seção de dicas" />

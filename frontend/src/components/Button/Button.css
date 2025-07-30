@@ -10,6 +10,7 @@
   font-size: 2rem;
   box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.4);
   transition: transform 0.3s ease;
+  cursor: pointer;
 }
 
 .button {
@@ -22,7 +23,7 @@
 }
 
 .filled:hover {
-  color: rgb(172, 170, 194);
+  color: var(--cor-destaque);
   transform: scale(1.05);
 }
 
