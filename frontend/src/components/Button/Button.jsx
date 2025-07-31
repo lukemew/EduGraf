@@ -1,9 +1,13 @@
 import "./Button.css";
 
-const Button = ({ link, description, filled }) => {
+const Button = ({ link, description, filled, onClick }) => {
   return (
     <div className="button">
-      <a className={filled ? "filled" : "transparent"} href={link}>
+      <a
+        onClick={onClick}
+        className={filled ? "filled" : "transparent"}
+        href={link}
+      >
         {description}
       </a>
     </div>

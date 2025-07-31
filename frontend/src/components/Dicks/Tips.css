@@ -1,6 +1,6 @@
 .tips {
   text-align: center;
-  font-size: 1.6rem;
+  font-size: 1.3rem;
   color: var(--cor-primaria);
 }
 
@@ -28,10 +28,11 @@
   color: var(--cor-primaria);
   font-weight: 500;
   font-size: 2rem;
+  padding: 4rem 0 0 0;
 }
 
 .tips-container li {
-  transform: scale(0.8);
+  transform: scale(0.6);
   position: relative;
   padding-left: 2em;
   margin-bottom: 1.5em;

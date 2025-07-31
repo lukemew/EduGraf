@@ -6,6 +6,7 @@ import FileUpload from "../../components/FileUpload/FileUpload";
 import Tips from "../../components/Dicks/Tips";
 import { useState } from "react";
 import axios from "axios";
+import Tabela from "../../assets/tabela-exemplo.png";
 
 const TabelasPage = () => {
   // 1. Estado para guardar o valor do polo selecionado.
@@ -73,11 +74,12 @@ const TabelasPage = () => {
       <header>
         <Navbar />
       </header>
-      <main>
+      <main className="tabelas_container">
         <h2>Gerar tabela do Polo</h2>
         <div className="select_container--polo">
           <p>Selecione o polo:</p>
           <Select value={selectedPolo} onChange={handlePoloChange} />
+          <p>Selecione as escolas do polo:</p>
           <div className="select_container--upload">
             <FileUpload onFileSelect={setSelectedFile} />
             <SmallButton
@@ -88,8 +90,13 @@ const TabelasPage = () => {
             />
           </div>
         </div>
+
+        <img src={Tabela} alt="Pré visualização da tabela" />
+        <SmallButton description={"Salvar tabela"} filled={false} />
       </main>
-      <footer>{/* <Tips /> */}</footer>
+      <footer>
+        <Tips pagina={2} />
+      </footer>
     </div>
   );
 };

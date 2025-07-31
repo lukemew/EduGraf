@@ -1,9 +1,14 @@
 import "./select.css";
 
-const Select = ({ value }) => {
+const Select = ({ value, onChange }) => {
   return (
     <div>
-      <select className="select" name="Seleção de polos">
+      <select
+        value={value}
+        onChange={onChange}
+        className="select"
+        name="Seleção de polos"
+      >
         <option value="1">Polo 1</option>
         <option value="2">Polo 2</option>
         <option value="3">Polo 3</option>

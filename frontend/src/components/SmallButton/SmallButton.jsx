@@ -1,14 +1,10 @@
 import "./SmallButton.css";
 
-const SmallButton = ({ filled, description }) => {
-  function onPressed() {
-    alert("Botão pressionado");
-  }
-
+const SmallButton = ({ filled, description, onClick }) => {
   return (
     <div className="small_button">
       <a
-        onClick={() => onPressed()}
+        onClick={() => onClick()}
         className={filled ? "filled" : "transparent"}
       >
         {description}
