@@ -1,4 +1,4 @@
-import "./select.css";
+import "./Select.css";
 
 const Select = ({ value, onChange, type }) => {
   return (
