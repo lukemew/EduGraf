@@ -1,6 +1,6 @@
 import "./select.css";
 
-const Select = ({ value, onChange }) => {
+const Select = ({ value, onChange, type }) => {
   return (
     <div>
       <select
@@ -9,20 +9,22 @@ const Select = ({ value, onChange }) => {
         className="select"
         name="Seleção de polos"
       >
-        <option value="1">Polo 1</option>
-        <option value="2">Polo 2</option>
-        <option value="3">Polo 3</option>
-        <option value="4">Polo 4</option>
-        <option value="5">Polo 5</option>
-        <option value="6">Polo 6</option>
-        <option value="7">Polo 7</option>
-        <option value="8">Polo 8</option>
-        <option value="9">Polo 9</option>
-        <option value="10">Polo 10</option>
-        <option value="11">Polo 11</option>
-        <option value="12">Polo 12</option>
-        <option value="13">Polo 13</option>
-        <option value="14">Polo 14 (Geral)</option>
+        {type === "polo"
+          ? Array.from({ length: 14 }, (_, i) => {
+              const number = i + 1;
+              const label =
+                number === 14 ? `Polo ${number} (Geral)` : `Polo ${number}`;
+              return (
+                <option key={i + 1} value={`Polo ${i + 1}`}>
+                  {label}
+                </option>
+              );
+            })
+          : Array.from({ length: 4 }, (_, i) => (
+              <option key={i + 1} value={`${i + 1}`}>
+                {i + 1}
+              </option>
+            ))}
       </select>
     </div>
   );

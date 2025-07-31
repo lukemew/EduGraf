@@ -19,7 +19,7 @@ const Navbar = () => {
             <Link to="/TabelasPage">Tabelas</Link>
           </li>
           <li>
-            <Link to="">Gráficos</Link>
+            <Link to="/GraficoPage">Gráficos</Link>
           </li>
         </ul>
       </div>

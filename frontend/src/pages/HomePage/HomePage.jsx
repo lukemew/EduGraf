@@ -12,7 +12,7 @@ const HomePage = () => {
     navigate("./TabelasPage");
   };
   const handleGraphButtonPressed = () => {
-    navigate("./TabelasPage");
+    navigate("./GraficoPage");
   };
 
   return (

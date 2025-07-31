@@ -78,7 +78,11 @@ const TabelasPage = () => {
         <h2>Gerar tabela do Polo</h2>
         <div className="select_container--polo">
           <p>Selecione o polo:</p>
-          <Select value={selectedPolo} onChange={handlePoloChange} />
+          <Select
+            type={"polo"}
+            value={selectedPolo}
+            onChange={handlePoloChange}
+          />
           <p>Selecione as escolas do polo:</p>
           <div className="select_container--upload">
             <FileUpload onFileSelect={setSelectedFile} />
