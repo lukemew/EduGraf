@@ -20,7 +20,7 @@ const Select = ({ value, onChange, type }) => {
                 </option>
               );
             })
-          : Array.from({ length: 4 }, (_, i) => (
+          : Array.from({ length: 2 }, (_, i) => (
               <option key={i + 1} value={`${i + 1}`}>
                 {i + 1}
               </option>

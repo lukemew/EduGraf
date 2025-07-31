@@ -2,11 +2,18 @@ import React from "react";
 import "./Navbar.css";
 import Logo from "../../assets/logo.png";
 import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 const Navbar = () => {
+  const navigate = useNavigate();
+
+  const handleLogoClick = () => {
+    navigate("../");
+  };
+
   return (
     <nav className="navbar">
-      <img src={Logo} alt="Logo do Edugraf" />
+      <img onClick={handleLogoClick} src={Logo} alt="Logo do Edugraf" />
       <div>
         <ul>
           <li>
