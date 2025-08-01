@@ -39,17 +39,23 @@ const GraficoPage = () => {
     }
 
     const formData = new FormData();
-    formData.append("quant_trimestre", selectedAmount);
+    formData.append("quant_trimestre", selectedAmount.toString());
 
     // Adicionar apenas o primeiro arquivo (para compatibilidade com o backend atual)
     if (selectedFiles[0]) {
       formData.append("file", selectedFiles[0]);
     }
 
-    console.log("Enviando para o backend:", {
+    console.log("🔍 DEBUG: Enviando para o backend:", {
       quant_trimestre: selectedAmount,
       file: selectedFiles[0]?.name,
     });
+    
+    // Debug: verificar se quant_trimestre é um número
+    console.log("🔍 DEBUG: Tipo de quant_trimestre:", typeof selectedAmount);
+    console.log("🔍 DEBUG: Valor de quant_trimestre:", selectedAmount);
+    console.log("🔍 DEBUG: Esta é a página de GRÁFICOS - deve gerar .pdf");
+    console.log("🔍 DEBUG: Se você quer .xlsx, vá para a página de TABELAS");
 
     try {
       // 3. Enviar a requisição (lógica de envio e download continua a mesma)
@@ -64,9 +70,32 @@ const GraficoPage = () => {
         }
       );
 
+      // Debug: Verificar headers da resposta
+      console.log("🔍 DEBUG: Headers da resposta:", response.headers);
+      console.log("🔍 DEBUG: Content-Type:", response.headers['content-type']);
+      console.log("🔍 DEBUG: Content-Disposition:", response.headers['content-disposition']);
+      console.log("🔍 DEBUG: Status code:", response.status);
+
       // Verificar se a resposta é válida
       if (response.data.size === 0) {
         throw new Error("Resposta vazia do servidor");
+      }
+
+      // Debug: Verificar se é realmente um PDF
+      const blob = new Blob([response.data]);
+      console.log("📏 Tamanho do blob:", blob.size, "bytes");
+      
+      // Verificar os primeiros bytes para confirmar se é PDF
+      const arrayBuffer = await blob.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      const firstBytes = uint8Array.slice(0, 4);
+      const header = String.fromCharCode(...firstBytes);
+      console.log("🔍 Primeiros bytes:", header);
+      
+      if (header === "%PDF") {
+        console.log("✅ Confirmed: É um PDF válido");
+      } else {
+        console.log("❌ Warning: Não parece ser um PDF válido");
       }
 
       const url = window.URL.createObjectURL(new Blob([response.data]));

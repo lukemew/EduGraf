@@ -34,10 +34,12 @@ const TabelasPage = () => {
     formData.append("polo", selectedPolo);
     formData.append("file", selectedFile);
 
-    console.log("Enviando para o backend:", {
+    console.log("🔍 DEBUG: Enviando para o backend:", {
       polo: selectedPolo,
       file: selectedFile.name,
     });
+    console.log("🔍 DEBUG: Esta é a página de TABELAS - deve gerar .xlsx");
+    console.log("🔍 DEBUG: Se você quer PDF, vá para a página de GRÁFICOS");
 
     try {
       // 3. Enviar a requisição (lógica de envio e download continua a mesma)
