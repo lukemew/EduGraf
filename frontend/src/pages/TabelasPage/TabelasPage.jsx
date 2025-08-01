@@ -52,20 +52,43 @@ const TabelasPage = () => {
         }
       );
 
+      // Verificar se a resposta é válida
+      if (response.data.size === 0) {
+        throw new Error("Resposta vazia do servidor");
+      }
+
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
       link.setAttribute(
         "download",
-        `tabela_${selectedPolo.replace(" ", "_")}.xlsx`
+        `tabela_${selectedPolo.replace(" ", "_")}_${new Date().toISOString().slice(0, 10)}.xlsx`
       ); // Nome dinâmico para o download
       document.body.appendChild(link);
       link.click();
       link.parentNode.removeChild(link);
       window.URL.revokeObjectURL(url);
+      
+      // Mensagem de sucesso
+      alert("Tabela gerada com sucesso! O download começará automaticamente.");
     } catch (error) {
       console.error("Erro ao fazer upload:", error);
-      alert("Ocorreu um erro ao gerar a tabela.");
+      
+      // Tentar ler a mensagem de erro do backend
+      let errorMessage = "Ocorreu um erro ao gerar a tabela.";
+      
+      if (error.response && error.response.data) {
+        try {
+          const errorText = await error.response.data.text();
+          if (errorText) {
+            errorMessage = `Erro: ${errorText}`;
+          }
+        } catch (e) {
+          // Se não conseguir ler o erro, usar mensagem padrão
+        }
+      }
+      
+      alert(errorMessage);
     }
   };
 
@@ -77,7 +100,7 @@ const TabelasPage = () => {
       <main className="tabelas_container">
         <h2>Gerar tabela do Polo</h2>
         <div className="select_container--polo">
-          <p>Selecione o polo:</p>
+          <p>Qual polo você deseja?</p>
           <Select
             type={"polo"}
             value={selectedPolo}

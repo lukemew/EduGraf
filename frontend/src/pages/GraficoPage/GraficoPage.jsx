@@ -41,15 +41,14 @@ const GraficoPage = () => {
     const formData = new FormData();
     formData.append("quant_trimestre", selectedAmount);
 
-    // Percorre o array de arquivos e adiciona cada um
-    selectedFiles.forEach((file) => {
-      // É comum usar 'files[]' para indicar ao backend que é um array de arquivos
-      formData.append("files[]", file);
-    });
+    // Adicionar apenas o primeiro arquivo (para compatibilidade com o backend atual)
+    if (selectedFiles[0]) {
+      formData.append("file", selectedFiles[0]);
+    }
 
     console.log("Enviando para o backend:", {
       quant_trimestre: selectedAmount,
-      files: selectedFiles.map((f) => f.name),
+      file: selectedFiles[0]?.name,
     });
 
     try {
@@ -65,20 +64,43 @@ const GraficoPage = () => {
         }
       );
 
+      // Verificar se a resposta é válida
+      if (response.data.size === 0) {
+        throw new Error("Resposta vazia do servidor");
+      }
+
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
       link.setAttribute(
         "download",
-        `tabela_${selectedAmount.replace(" ", "_")}.xlsx`
+        `relatorio_graficos_${selectedAmount}_trimestre_${new Date().toISOString().slice(0, 10)}.pdf`
       ); // Nome dinâmico para o download
       document.body.appendChild(link);
       link.click();
       link.parentNode.removeChild(link);
       window.URL.revokeObjectURL(url);
+      
+      // Mensagem de sucesso
+      alert("Relatório de gráficos gerado com sucesso! O PDF será baixado automaticamente.");
     } catch (error) {
       console.error("Erro ao fazer upload:", error);
-      alert("Ocorreu um erro ao gerar a tabela.");
+      
+      // Tentar ler a mensagem de erro do backend
+      let errorMessage = "Ocorreu um erro ao gerar o gráfico.";
+      
+      if (error.response && error.response.data) {
+        try {
+          const errorText = await error.response.data.text();
+          if (errorText) {
+            errorMessage = `Erro: ${errorText}`;
+          }
+        } catch (e) {
+          // Se não conseguir ler o erro, usar mensagem padrão
+        }
+      }
+      
+      alert(errorMessage);
     }
   };
 
@@ -88,11 +110,9 @@ const GraficoPage = () => {
         <Navbar />
       </header>
       <main className="tabelas_container">
-        <h2>Gerar gráfico do Polo</h2>
+        <h2>Gerar gráficos do Polo</h2>
         <div className="select_container--polo">
-          <p>Selecione a quantidade de trimestres:</p>
-          <Select value={selectedAmount} onChange={handleAmountChange} />
-          <p>Selecione a(s) tabela(s) do polo:</p>
+          <p>Selecione as tabelas do polo:</p>
           <div className="select_container--upload">
             {/* <FileUpload onFileSelect={setSelectedFiles} /> */}
             {Array.from({ length: selectedAmount }, (_, index) => (
@@ -105,7 +125,7 @@ const GraficoPage = () => {
             ))}
             <SmallButton
               className="upload_button"
-              description={"Gerar tabela"}
+              description={"Gerar gráfico"}
               filled={true}
               onClick={handleUpload}
             />
