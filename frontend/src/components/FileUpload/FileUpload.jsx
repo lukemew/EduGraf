@@ -26,6 +26,7 @@ const FileUpload = ({ onFileSelect }) => {
         className="file-input"
         onChange={handleFileChange}
         accept=".xlsx"
+        multiple={true}
       />
 
       <label htmlFor="file-input" className="file-label">
