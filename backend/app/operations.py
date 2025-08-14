@@ -1,0 +1,291 @@
+import pandas as pd
+import os
+import tempfile
+from datetime import datetime
+from typing import List
+from fastapi import UploadFile
+import io
+
+# Importar as funções do sistema original
+from utils import (
+    process_excel_file_real,
+    process_excel_file,
+    generate_charts_real,
+    generate_charts,
+    create_pdf_report,
+    debug_dataframe_sections
+)
+
+class Operations:
+    """Classe simplificada para operações de processamento"""
+    
+    def __init__(self):
+        self.temp_dir = "temp"
+        self.upload_dir = "uploads"
+        os.makedirs(self.temp_dir, exist_ok=True)
+        os.makedirs(self.upload_dir, exist_ok=True)
+    
+    async def gerar_tabela_do_polo(self, files: List[UploadFile], polo: str = "Geral") -> str:
+        """
+        Gera tabela consolidada do polo especificado
+        
+        Args:
+            files: Lista de arquivos Excel
+            polo: Nome do polo para filtrar
+            
+        Returns:
+            Caminho do arquivo Excel gerado
+        """
+        try:
+            print(f"📊 Processando tabela para polo: {polo}")
+            
+            # Processar o primeiro arquivo (ou consolidar múltiplos se necessário)
+            file = files[0]
+            
+            # Ler arquivo
+            contents = await file.read()
+            df = pd.read_excel(io.BytesIO(contents), header=None)
+            
+            print(f"📄 Arquivo lido: {file.filename} - Shape: {df.shape}")
+            
+            # Detectar formato
+            is_real_format = self._check_if_real_format(df)
+            print(f"🔍 Formato detectado: {'Real da Prefeitura' if is_real_format else 'Formato Antigo'}")
+            
+            if is_real_format:
+                # Processar formato real
+                processed_data = process_excel_file_real(df, polo)
+                output_file = self._save_real_format_table(processed_data, polo)
+            else:
+                # Processar formato antigo
+                # Tentar encontrar cabeçalho
+                header_row = self._find_header_row(df)
+                if header_row is not None:
+                    df = pd.read_excel(io.BytesIO(contents), header=header_row)
+                
+                processed_data = process_excel_file(df, polo)
+                output_file = self._save_old_format_table(processed_data, polo)
+            
+            print(f"✅ Tabela salva em: {output_file}")
+            return output_file
+            
+        except Exception as e:
+            print(f"❌ Erro no processamento da tabela: {e}")
+            raise e
+    
+    async def gerar_graficos(self, files: List[UploadFile], trimestre: int) -> str:
+        """
+        Gera gráficos e relatório PDF
+        
+        Args:
+            files: Lista de arquivos Excel
+            trimestre: Número do trimestre
+            
+        Returns:
+            Caminho do arquivo PDF gerado
+        """
+        try:
+            print(f"📈 Gerando gráficos para o {trimestre}º trimestre")
+            
+            # Processar o primeiro arquivo
+            file = files[0]
+            contents = await file.read()
+            df = pd.read_excel(io.BytesIO(contents), header=None)
+            
+            print(f"📄 Arquivo lido: {file.filename} - Shape: {df.shape}")
+            
+            # Debug detalhado
+            debug_dataframe_sections(df)
+            
+            # Detectar formato e processar
+            is_real_format = self._check_if_real_format(df)
+            print(f"🔍 Formato detectado: {'Real da Prefeitura' if is_real_format else 'Formato Antigo'}")
+            
+            if is_real_format:
+                # Processar formato real
+                processed_data = process_excel_file_real(df, "Geral")
+                charts_data = generate_charts_real(processed_data, trimestre)
+            else:
+                # Processar formato antigo
+                header_row = self._find_header_row(df)
+                if header_row is not None:
+                    df = pd.read_excel(io.BytesIO(contents), header=header_row)
+                
+                charts_data = generate_charts(df, trimestre)
+            
+            # Criar PDF
+            pdf_path = create_pdf_report(charts_data, trimestre)
+            
+            print(f"✅ Relatório PDF gerado: {pdf_path}")
+            return pdf_path
+            
+        except Exception as e:
+            print(f"❌ Erro na geração de gráficos: {e}")
+            raise e
+    
+    async def processar_planilhas_simples(self, files: List[UploadFile]) -> dict:
+        """
+        Versão simplificada que retorna dados em JSON
+        Para compatibilidade com o código original
+        
+        Args:
+            files: Lista de arquivos Excel
+            
+        Returns:
+            Dicionário com dados processados
+        """
+        try:
+            results = []
+            
+            for file in files:
+                print(f"📄 Processando arquivo: {file.filename}")
+                
+                contents = await file.read()
+                df = pd.read_excel(io.BytesIO(contents))
+                
+                # Processar dados básicos
+                file_info = {
+                    "filename": file.filename,
+                    "rows": len(df),
+                    "columns": len(df.columns),
+                    "columns_names": df.columns.tolist(),
+                    "sample_data": df.head(3).to_dict('records') if len(df) > 0 else []
+                }
+                
+                # Tentar detectar tipo de dados
+                if self._has_education_columns(df):
+                    file_info["type"] = "dados_educacionais"
+                    
+                    # Estatísticas básicas se for dados educacionais
+                    if 'Nome da escola' in df.columns:
+                        file_info["total_escolas"] = df['Nome da escola'].nunique()
+                    
+                    if 'Niveis de Leitura' in df.columns:
+                        file_info["distribuicao_leitura"] = df['Niveis de Leitura'].value_counts().to_dict()
+                    
+                    if 'Niveis de Escrita' in df.columns:
+                        file_info["distribuicao_escrita"] = df['Niveis de Escrita'].value_counts().to_dict()
+                else:
+                    file_info["type"] = "planilha_generica"
+                
+                results.append(file_info)
+            
+            return {
+                "total_files": len(files),
+                "processed_at": datetime.now().isoformat(),
+                "files": results
+            }
+            
+        except Exception as e:
+            print(f"❌ Erro no processamento simples: {e}")
+            raise e
+    
+    def _check_if_real_format(self, df: pd.DataFrame) -> bool:
+        """Verifica se é formato real da prefeitura"""
+        try:
+            for idx, row in df.head(50).iterrows():
+                for value in row:
+                    if isinstance(value, str):
+                        value_str = str(value).upper()
+                        if "DIAGNÓSTICO DE LEITURA" in value_str or "DIAGNÓSTICO DE ESCRITA" in value_str:
+                            return True
+                        if "NL" in value_str and "LS" in value_str and "LP" in value_str:
+                            return True
+            return False
+        except:
+            return False
+    
+    def _find_header_row(self, df: pd.DataFrame) -> int:
+        """Encontra a linha do cabeçalho no formato antigo"""
+        try:
+            for idx in range(min(20, len(df))):
+                row = df.iloc[idx]
+                row_str = ' '.join([str(cell).upper() for cell in row if not pd.isna(cell)])
+                
+                if "NOME DA ESCOLA" in row_str and "MODALIDADE" in row_str:
+                    return idx
+            return None
+        except:
+            return None
+    
+    def _has_education_columns(self, df: pd.DataFrame) -> bool:
+        """Verifica se tem colunas educacionais"""
+        education_keywords = [
+            'nome da escola', 'modalidade', 'niveis de leitura', 
+            'niveis de escrita', 'escola', 'polo', 'diagnóstico'
+        ]
+        
+        columns_str = ' '.join(df.columns.astype(str)).lower()
+        return any(keyword in columns_str for keyword in education_keywords)
+    
+    def _save_real_format_table(self, processed_data: dict, polo: str) -> str:
+        """Salva tabela do formato real"""
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        output_file = os.path.join(
+            self.temp_dir, 
+            f"tabela_real_{polo.replace(' ', '_')}_{timestamp}.xlsx"
+        )
+        
+        with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
+            # Aba de Leitura
+            processed_data['leitura'].to_excel(writer, sheet_name='Leitura', index=False)
+            
+            # Aba de Escrita
+            processed_data['escrita'].to_excel(writer, sheet_name='Escrita', index=False)
+            
+            # Estatísticas
+            stats_data = {
+                'Métrica': [
+                    'Total de Anos/Séries',
+                    'Total Alunos (Leitura)',
+                    'Total Alunos (Escrita)',
+                    'Média % Não Leitores',
+                    'Média % Leitores Fluentes'
+                ],
+                'Valor': [
+                    len(processed_data['leitura']),
+                    processed_data['leitura']['total alunos'].sum(),
+                    processed_data['escrita']['total alunos'].sum(),
+                    f"{processed_data['leitura']['nl_%'].mean():.1f}%",
+                    f"{processed_data['leitura']['lcf_%'].mean():.1f}%"
+                ]
+            }
+            
+            stats_df = pd.DataFrame(stats_data)
+            stats_df.to_excel(writer, sheet_name='Resumo', index=False)
+        
+        return output_file
+    
+    def _save_old_format_table(self, processed_data: pd.DataFrame, polo: str) -> str:
+        """Salva tabela do formato antigo"""
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        output_file = os.path.join(
+            self.temp_dir, 
+            f"tabela_antiga_{polo.replace(' ', '_')}_{timestamp}.xlsx"
+        )
+        
+        with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
+            processed_data.to_excel(writer, sheet_name='Dados', index=False)
+            
+            # Estatísticas básicas
+            if not processed_data.empty:
+                stats_data = {
+                    'Métrica': [
+                        'Total de Escolas',
+                        'Total de Alunos',
+                        'Média Alunos/Escola'
+                    ],
+                    'Valor': [
+                        len(processed_data),
+                        processed_data['Total Alunos'].sum() if 'Total Alunos' in processed_data.columns else 0,
+                        f"{processed_data['Total Alunos'].mean():.1f}" if 'Total Alunos' in processed_data.columns else "N/A"
+                    ]
+                }
+                
+                stats_df = pd.DataFrame(stats_data)
+                stats_df.to_excel(writer, sheet_name='Resumo', index=False)
+        
+        return output_file
+
+# Instância global para uso
+operations = Operations()

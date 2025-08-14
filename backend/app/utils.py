@@ -42,6 +42,7 @@ def criar_dataframe(arquivo_em_bytes, linhas_a_serem_puladas, colunas_a_serem_us
 def process_excel_file_real(df: pd.DataFrame, polo: str) -> Dict[str, Any]:
     """
     Processa planilha Excel real da prefeitura e consolida dados
+    CORRIGIDO: Agora lê todas as linhas disponíveis, não apenas 5
     
     Args:
         df: DataFrame com os dados da planilha
@@ -51,7 +52,10 @@ def process_excel_file_real(df: pd.DataFrame, polo: str) -> Dict[str, Any]:
         Dicionário com dados processados
     """
     try:
-        # Configurações para leitura
+        print(f"🔍 DEBUG: Iniciando processamento do formato real")
+        print(f"🔍 DEBUG: DataFrame original shape: {df.shape}")
+        
+        # Configurações para leitura (suas configurações originais)
         linhas_para_pular_leitura = [0, 1, 2, 3, 4, 5, 12, 17, 20, 21, 22, *range(23, 45)]
         linhas_para_pular_escrita = [*range(0, 27), 33, 38, 41, 42, 43, 44]
         cols_leitura = list(range(0, 14))
@@ -60,65 +64,203 @@ def process_excel_file_real(df: pd.DataFrame, polo: str) -> Dict[str, Any]:
         columns_leitura = ["ano", "total alunos", "nl", "nl%", "ls", "ls%", "lp", "lp%", "lf", "lf%", "lsf", "lsf%", "lcf", "lcf%"]
         columns_escrita = ["ano", "total alunos", "p", "p%", "s", "s%", "s.a.", "s.a%", "a", "a%", "o", "o%"]
         
-        # Ler dados de leitura diretamente do DataFrame
-        df_leitura = df.iloc[6:11, 0:14].copy()  # Linhas 6-10, colunas 0-13
-        df_leitura.columns = columns_leitura
+        print(f"🔍 DEBUG: Linhas para pular leitura: {linhas_para_pular_leitura}")
+        print(f"🔍 DEBUG: Linhas para pular escrita: {linhas_para_pular_escrita}")
         
-        # Ler dados de escrita diretamente do DataFrame
-        df_escrita = df.iloc[28:33, 0:12].copy()  # Linhas 28-32, colunas 0-11
-        df_escrita.columns = columns_escrita
+        # SEÇÃO DE LEITURA - Identificar todas as linhas válidas
+        print(f"🔍 DEBUG: === PROCESSANDO SEÇÃO DE LEITURA ===")
         
-        # Converter colunas numéricas primeiro
+        # Encontrar a linha inicial da seção de leitura (procurar por indicadores)
+        inicio_leitura = None
+        for idx in range(min(50, len(df))):
+            if idx >= len(df):
+                break
+            row = df.iloc[idx]
+            for value in row:
+                if pd.notna(value):
+                    value_str = str(value).upper()
+                    if "DIAGNÓSTICO DE LEITURA" in value_str or "LEITURA" in value_str:
+                        inicio_leitura = idx
+                        print(f"🔍 DEBUG: Seção de leitura encontrada na linha {idx}")
+                        break
+            if inicio_leitura is not None:
+                break
+        
+        # Se não encontrar, usar posição padrão
+        if inicio_leitura is None:
+            inicio_leitura = 6
+            print(f"🔍 DEBUG: Usando posição padrão para leitura: {inicio_leitura}")
+        
+        # Ler dados de leitura - encontrar todas as linhas com dados válidos
+        df_leitura_raw = []
+        max_linha_leitura = min(inicio_leitura + 50, len(df))  # Buscar nas próximas 50 linhas
+        
+        for idx in range(inicio_leitura, max_linha_leitura):
+            if idx in linhas_para_pular_leitura:
+                continue
+                
+            if idx >= len(df):
+                break
+                
+            row = df.iloc[idx, :len(cols_leitura)]  # Pegar apenas as colunas necessárias
+            
+            # Verificar se a linha tem dados válidos (pelo menos o primeiro campo não vazio)
+            if pd.notna(row.iloc[0]) and str(row.iloc[0]).strip() != '':
+                # Verificar se parece ser uma linha de dados (tem números ou anos)
+                primeiro_valor = str(row.iloc[0]).strip()
+                # Corrigido: usar ° em vez de º e incluir anos 1° ao 9° e EJA
+                if any(ano in primeiro_valor.upper() for ano in ["ANO", "SÉRIE", "1°", "2°", "3°", "4°", "5°", "6°", "7°", "8°", "9°", "EJA"]) or primeiro_valor.isdigit():
+                    df_leitura_raw.append(row.tolist())
+                    print(f"🔍 DEBUG: Linha de leitura válida {idx}: {primeiro_valor}")
+        
+        print(f"🔍 DEBUG: Total de linhas de leitura encontradas: {len(df_leitura_raw)}")
+        
+        # Criar DataFrame de leitura
+        if df_leitura_raw:
+            df_leitura = pd.DataFrame(df_leitura_raw, columns=columns_leitura[:len(df_leitura_raw[0])])
+            # Completar colunas faltantes se necessário
+            for col in columns_leitura:
+                if col not in df_leitura.columns:
+                    df_leitura[col] = 0
+            df_leitura = df_leitura[columns_leitura]  # Reordenar colunas
+        else:
+            # Fallback para método original se não encontrar dados
+            print("🔍 DEBUG: Usando método fallback para leitura")
+            df_leitura = df.iloc[inicio_leitura:inicio_leitura+15, 0:14].copy()
+            df_leitura.columns = columns_leitura
+        
+        print(f"🔍 DEBUG: DataFrame de leitura shape: {df_leitura.shape}")
+        print(f"🔍 DEBUG: Primeiras linhas de leitura:\n{df_leitura.head()}")
+        
+        # SEÇÃO DE ESCRITA - Identificar todas as linhas válidas
+        print(f"🔍 DEBUG: === PROCESSANDO SEÇÃO DE ESCRITA ===")
+        
+        # Encontrar a linha inicial da seção de escrita
+        inicio_escrita = None
+        for idx in range(min(50, len(df))):
+            if idx >= len(df):
+                break
+            row = df.iloc[idx]
+            for value in row:
+                if pd.notna(value):
+                    value_str = str(value).upper()
+                    if "DIAGNÓSTICO DE ESCRITA" in value_str or ("ESCRITA" in value_str and "LEITURA" not in value_str):
+                        inicio_escrita = idx
+                        print(f"🔍 DEBUG: Seção de escrita encontrada na linha {idx}")
+                        break
+            if inicio_escrita is not None:
+                break
+        
+        # Se não encontrar, usar posição padrão
+        if inicio_escrita is None:
+            inicio_escrita = 28
+            print(f"🔍 DEBUG: Usando posição padrão para escrita: {inicio_escrita}")
+        
+        # Ler dados de escrita - encontrar todas as linhas com dados válidos
+        df_escrita_raw = []
+        max_linha_escrita = min(inicio_escrita + 50, len(df))  # Buscar nas próximas 50 linhas
+        
+        for idx in range(inicio_escrita, max_linha_escrita):
+            if idx in linhas_para_pular_escrita:
+                continue
+                
+            if idx >= len(df):
+                break
+                
+            row = df.iloc[idx, :len(cols_escrita)]  # Pegar apenas as colunas necessárias
+            
+            # Verificar se a linha tem dados válidos
+            if pd.notna(row.iloc[0]) and str(row.iloc[0]).strip() != '':
+                primeiro_valor = str(row.iloc[0]).strip()
+                # Corrigido: usar ° em vez de º e incluir anos 1° ao 9° e EJA
+                if any(ano in primeiro_valor.upper() for ano in ["ANO", "SÉRIE", "1°", "2°", "3°", "4°", "5°", "6°", "7°", "8°", "9°", "EJA"]) or primeiro_valor.isdigit():
+                    df_escrita_raw.append(row.tolist())
+                    print(f"🔍 DEBUG: Linha de escrita válida {idx}: {primeiro_valor}")
+        
+        print(f"🔍 DEBUG: Total de linhas de escrita encontradas: {len(df_escrita_raw)}")
+        
+        # Criar DataFrame de escrita
+        if df_escrita_raw:
+            df_escrita = pd.DataFrame(df_escrita_raw, columns=columns_escrita[:len(df_escrita_raw[0])])
+            # Completar colunas faltantes se necessário
+            for col in columns_escrita:
+                if col not in df_escrita.columns:
+                    df_escrita[col] = 0
+            df_escrita = df_escrita[columns_escrita]  # Reordenar colunas
+        else:
+            # Fallback para método original se não encontrar dados
+            print("🔍 DEBUG: Usando método fallback para escrita")
+            df_escrita = df.iloc[inicio_escrita:inicio_escrita+15, 0:12].copy()
+            df_escrita.columns = columns_escrita
+        
+        print(f"🔍 DEBUG: DataFrame de escrita shape: {df_escrita.shape}")
+        print(f"🔍 DEBUG: Primeiras linhas de escrita:\n{df_escrita.head()}")
+        
+        # PROCESSAMENTO DOS DADOS
+        print(f"🔍 DEBUG: === PROCESSANDO DADOS NUMÉRICOS ===")
+        
+        # Converter colunas numéricas para leitura
         numeric_cols_leitura = ['total alunos', 'nl', 'ls', 'lp', 'lf', 'lsf', 'lcf']
         numeric_cols_escrita = ['total alunos', 'p', 's', 's.a.', 'a', 'o']
         
         for col in numeric_cols_leitura:
-            df_leitura[col] = pd.to_numeric(df_leitura[col], errors='coerce')
+            if col in df_leitura.columns:
+                df_leitura[col] = pd.to_numeric(df_leitura[col], errors='coerce')
         
         for col in numeric_cols_escrita:
-            df_escrita[col] = pd.to_numeric(df_escrita[col], errors='coerce')
+            if col in df_escrita.columns:
+                df_escrita[col] = pd.to_numeric(df_escrita[col], errors='coerce')
         
-        # Agora fazer fillna
+        # Preencher NaN com 0
         df_leitura = df_leitura.fillna(0).infer_objects(copy=False)
         df_escrita = df_escrita.fillna(0).infer_objects(copy=False)
         
-        # Processar dados de leitura
-        df_leitura_soma = df_leitura.groupby('ano').agg({
-            'total alunos': 'sum',
-            'nl': 'sum',
-            'ls': 'sum', 
-            'lp': 'sum',
-            'lf': 'sum',
-            'lsf': 'sum',
-            'lcf': 'sum'
-        }).reset_index()
+        # Remover linhas completamente vazias (onde todas as colunas numéricas são 0)
+        df_leitura = df_leitura[df_leitura[numeric_cols_leitura].sum(axis=1) > 0]
+        df_escrita = df_escrita[df_escrita[numeric_cols_escrita].sum(axis=1) > 0]
         
-        # Recalcula percentuais
-        total_col = df_leitura_soma['total alunos'] 
-        df_leitura_soma['nl_%'] = (df_leitura_soma['nl'] / total_col * 100).fillna(0).round(2)
-        df_leitura_soma['ls_%'] = (df_leitura_soma['ls'] / total_col * 100).fillna(0).round(2)
-        df_leitura_soma['lp_%'] = (df_leitura_soma['lp'] / total_col * 100).fillna(0).round(2)
-        df_leitura_soma['lf_%'] = (df_leitura_soma['lf'] / total_col * 100).fillna(0).round(2)
-        df_leitura_soma['lsf_%'] = (df_leitura_soma['lsf'] / total_col * 100).fillna(0).round(2)
-        df_leitura_soma['lcf_%'] = (df_leitura_soma['lcf'] / total_col * 100).fillna(0).round(2)
+        print(f"🔍 DEBUG: Após limpeza - Leitura: {len(df_leitura)} linhas, Escrita: {len(df_escrita)} linhas")
         
-        # Processar dados de escrita
-        df_escrita_soma = df_escrita.groupby('ano').agg({
-            'total alunos': 'sum',
-            'p': 'sum',
-            's': 'sum',
-            's.a.': 'sum',
-            'a': 'sum',
-            'o': 'sum'
-        }).reset_index()
+        # Processar dados de leitura - agrupar se necessário
+        if 'ano' in df_leitura.columns:
+            df_leitura_soma = df_leitura.groupby('ano').agg({
+                col: 'sum' for col in numeric_cols_leitura
+            }).reset_index()
+        else:
+            df_leitura_soma = df_leitura.copy()
         
-        # Recalcula percentuais
-        total_col = df_escrita_soma['total alunos']
-        df_escrita_soma['p_%'] = (df_escrita_soma['p'] / total_col * 100).fillna(0).round(2)
-        df_escrita_soma['s_%'] = (df_escrita_soma['s'] / total_col * 100).fillna(0).round(2)
-        df_escrita_soma['s.a._%'] = (df_escrita_soma['s.a.'] / total_col * 100).fillna(0).round(2)
-        df_escrita_soma['a_%'] = (df_escrita_soma['a'] / total_col * 100).fillna(0).round(2)
-        df_escrita_soma['o_%'] = (df_escrita_soma['o'] / total_col * 100).fillna(0).round(2)
+        # Recalcular percentuais de leitura
+        if len(df_leitura_soma) > 0:
+            total_col = df_leitura_soma['total alunos'] 
+            df_leitura_soma['nl_%'] = (df_leitura_soma['nl'] / total_col * 100).fillna(0).round(2)
+            df_leitura_soma['ls_%'] = (df_leitura_soma['ls'] / total_col * 100).fillna(0).round(2)
+            df_leitura_soma['lp_%'] = (df_leitura_soma['lp'] / total_col * 100).fillna(0).round(2)
+            df_leitura_soma['lf_%'] = (df_leitura_soma['lf'] / total_col * 100).fillna(0).round(2)
+            df_leitura_soma['lsf_%'] = (df_leitura_soma['lsf'] / total_col * 100).fillna(0).round(2)
+            df_leitura_soma['lcf_%'] = (df_leitura_soma['lcf'] / total_col * 100).fillna(0).round(2)
+        
+        # Processar dados de escrita - agrupar se necessário
+        if 'ano' in df_escrita.columns:
+            df_escrita_soma = df_escrita.groupby('ano').agg({
+                col: 'sum' for col in numeric_cols_escrita
+            }).reset_index()
+        else:
+            df_escrita_soma = df_escrita.copy()
+        
+        # Recalcular percentuais de escrita
+        if len(df_escrita_soma) > 0:
+            total_col = df_escrita_soma['total alunos']
+            df_escrita_soma['p_%'] = (df_escrita_soma['p'] / total_col * 100).fillna(0).round(2)
+            df_escrita_soma['s_%'] = (df_escrita_soma['s'] / total_col * 100).fillna(0).round(2)
+            df_escrita_soma['s.a._%'] = (df_escrita_soma['s.a.'] / total_col * 100).fillna(0).round(2)
+            df_escrita_soma['a_%'] = (df_escrita_soma['a'] / total_col * 100).fillna(0).round(2)
+            df_escrita_soma['o_%'] = (df_escrita_soma['o'] / total_col * 100).fillna(0).round(2)
+        
+        print(f"🔍 DEBUG: === RESULTADO FINAL ===")
+        print(f"🔍 DEBUG: Linhas finais de leitura: {len(df_leitura_soma)}")
+        print(f"🔍 DEBUG: Linhas finais de escrita: {len(df_escrita_soma)}")
+        print(f"🔍 DEBUG: Dados de leitura:\n{df_leitura_soma}")
+        print(f"🔍 DEBUG: Dados de escrita:\n{df_escrita_soma}")
         
         return {
             'leitura': df_leitura_soma,
@@ -127,7 +269,52 @@ def process_excel_file_real(df: pd.DataFrame, polo: str) -> Dict[str, Any]:
         }
         
     except Exception as e:
+        print(f"🔍 DEBUG: Erro no processamento da planilha real: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise Exception(f"Erro no processamento da planilha real: {str(e)}")
+
+# Função auxiliar para debugging melhorado
+def debug_dataframe_sections(df: pd.DataFrame):
+    """Debug detalhado das seções do DataFrame"""
+    print(f"🔍 DEBUG: === ANÁLISE DETALHADA DO DATAFRAME ===")
+    print(f"🔍 DEBUG: Shape total: {df.shape}")
+    
+    # Procurar seções
+    secoes_encontradas = []
+    
+    for idx in range(len(df)):
+        if idx >= len(df):
+            break
+            
+        row = df.iloc[idx]
+        for col_idx, value in enumerate(row):
+            if pd.notna(value):
+                value_str = str(value).upper()
+                
+                if "LEITURA" in value_str:
+                    secoes_encontradas.append(f"LEITURA na linha {idx}, coluna {col_idx}: '{value}'")
+                elif "ESCRITA" in value_str:
+                    secoes_encontradas.append(f"ESCRITA na linha {idx}, coluna {col_idx}: '{value}'")
+                elif any(ano in value_str for ano in ["1° ANO", "2° ANO", "3° ANO", "4° ANO", "5° ANO", "6° ANO", "7° ANO", "8° ANO", "9° ANO"]):
+                    secoes_encontradas.append(f"ANO na linha {idx}, coluna {col_idx}: '{value}'")
+    
+    print(f"🔍 DEBUG: Seções encontradas:")
+    for secao in secoes_encontradas[:20]:  # Mostrar apenas as primeiras 20
+        print(f"🔍 DEBUG:   {secao}")
+    
+    # Mostrar estatísticas por linha
+    print(f"🔍 DEBUG: === ESTATÍSTICAS POR LINHA (primeiras 50) ===")
+    for idx in range(min(50, len(df))):
+        if idx >= len(df):
+            break
+            
+        row = df.iloc[idx]
+        valores_nao_vazios = [str(v)[:20] for v in row if pd.notna(v) and str(v).strip() != '']
+        
+        if valores_nao_vazios:
+            print(f"🔍 DEBUG: L{idx:2d}: {' | '.join(valores_nao_vazios[:3])}{'...' if len(valores_nao_vazios) > 3 else ''}")
+
 
 def process_excel_file(df: pd.DataFrame, polo: str) -> pd.DataFrame:
     """
