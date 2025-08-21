@@ -7,7 +7,7 @@ from fastapi import UploadFile
 import io
 
 # Importar as funções do sistema original
-from utils import (
+from app.utils import (
     process_excel_file_real,
     process_excel_file,
     generate_charts_real,

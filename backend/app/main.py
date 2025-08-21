@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
 import os
 from datetime import datetime
-from operations import operations as op
+from app.operations import operations as op
 
 app = FastAPI(
     title="EduGraf API Simplificada",

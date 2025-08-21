@@ -9,3 +9,4 @@ python-dotenv
 pydantic==2.11.5
 reportlab
 numpy==2.2.6 
+gunicorn

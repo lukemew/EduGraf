@@ -1,1 +1,25 @@
-# Aqui ficará as informações do docker, que orquestrarão o sistema
+services:
+  # Serviço do Backend (API)
+  backend:
+    build:
+      context: ./backend/ # Caminho para o Dockerfile do backend
+    container_name: edugraf-backend
+    ports:
+      - "5000:5000" # Mapeia a porta 5000 do host para a 5000 do container
+    volumes:
+      - ./backend:/app # Mapeia a pasta backend para /app dentro do container para desenvolvimento (opcional)
+    restart: unless-stopped
+    environment:
+      # Aqui você pode definir variáveis de ambiente se necessário
+      - FLASK_ENV=production
+
+  # Serviço do Frontend (React App)
+  frontend:
+    build:
+      context: ./frontend/ # Caminho para o Dockerfile do frontend
+    container_name: edugraf-frontend
+    ports:
+      - "80:80" # Mapeia a porta 80 do host para a 80 do container
+    restart: unless-stopped
+    depends_on:
+      - backend # Garante que o backend inicie antes do frontend (bom para dependências)
