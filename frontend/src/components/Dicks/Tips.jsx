@@ -3,14 +3,13 @@ import Ilustracao2 from "../../assets/ilustracao2.png";
 
 const DicasHome = [
   "Vá para a de opção criar tabelas",
-  "Irá ser criado a tabela de um polo",
-  "Agora vá para segunda opção",
+  "Você irá fazer o upload da planilha Excel de um polo específico.",
+  "O sistema irá processar e padronizar os dados, gerando uma nova planilha organizada como resultado.",
   "Vai ser gerado gráficos de vários polos",
 ];
 const DicasTabela = [
   "As planilhas devem estar no formato Excel (.xlsx).",
-  "Planilha preenchida com o modelo padrão",
-  "As planilhas deve conter,Nome da escola,Modalidade,Niveis de Leitura e Niveis de Escrita",
+  "As planilhas devem conter: nome da escola, modalidade, niveis de leitura e niveis de escrita",
 ];
 const DicasGrafico = [
   "Primeiro é necessário fazer o processo de gerar tabelas",
@@ -30,7 +29,7 @@ const Tips = ({ pagina }) => {
 
   return (
     <div id="dicas" className="tips">
-      <h2>Dicas</h2>
+      <h2>Instruções</h2>
       <div className="tips-container">
         <img src={Ilustracao2} alt="Ilustração da seção de dicas" />
         <ul>{seletorDeDicas()}</ul>
