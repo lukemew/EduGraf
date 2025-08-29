@@ -2,7 +2,7 @@ import "./HomePage.css";
 import Navbar from "../../components/Navbar/Navbar";
 import Banner from "../../components/Banner/Banner";
 import Button from "../../components/Button/Button";
-import Tips from "../../components/Dicks/Tips";
+import Tips from "../../components/Tips/Tips";
 import { useNavigate } from "react-router-dom";
 
 const HomePage = () => {

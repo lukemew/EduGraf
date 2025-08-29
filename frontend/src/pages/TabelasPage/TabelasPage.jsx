@@ -3,7 +3,7 @@ import Navbar from "../../components/Navbar/Navbar";
 import Select from "../../components/Select/Select";
 import SmallButton from "../../components/SmallButton/SmallButton";
 import FileUpload from "../../components/FileUpload/FileUpload";
-import Tips from "../../components/Dicks/Tips";
+import Tips from "../../components/Tips/Tips";
 import { useState } from "react";
 import axios from "axios";
 import Tabela from "../../assets/tabela-exemplo.png";
@@ -64,21 +64,23 @@ const TabelasPage = () => {
       link.href = url;
       link.setAttribute(
         "download",
-        `tabela_${selectedPolo.replace(" ", "_")}_${new Date().toISOString().slice(0, 10)}.xlsx`
+        `tabela_${selectedPolo.replace(" ", "_")}_${new Date()
+          .toISOString()
+          .slice(0, 10)}.xlsx`
       ); // Nome dinâmico para o download
       document.body.appendChild(link);
       link.click();
       link.parentNode.removeChild(link);
       window.URL.revokeObjectURL(url);
-      
+
       // Mensagem de sucesso
       alert("Tabela gerada com sucesso! O download começará automaticamente.");
     } catch (error) {
       console.error("Erro ao fazer upload:", error);
-      
+
       // Tentar ler a mensagem de erro do backend
       let errorMessage = "Ocorreu um erro ao gerar a tabela.";
-      
+
       if (error.response && error.response.data) {
         try {
           const errorText = await error.response.data.text();
@@ -89,7 +91,7 @@ const TabelasPage = () => {
           // Se não conseguir ler o erro, usar mensagem padrão
         }
       }
-      
+
       alert(errorMessage);
     }
   };

@@ -3,7 +3,7 @@ import Navbar from "../../components/Navbar/Navbar";
 import Select from "../../components/Select/Select";
 import SmallButton from "../../components/SmallButton/SmallButton";
 import FileUpload from "../../components/FileUpload/FileUpload";
-import Tips from "../../components/Dicks/Tips";
+import Tips from "../../components/Tips/Tips";
 import { useState } from "react";
 import axios from "axios";
 import Grafico from "../../assets/grafico-exemplo.png";
@@ -50,7 +50,7 @@ const GraficoPage = () => {
       quant_trimestre: selectedAmount,
       file: selectedFiles[0]?.name,
     });
-    
+
     // Debug: verificar se quant_trimestre é um número
     console.log("🔍 DEBUG: Tipo de quant_trimestre:", typeof selectedAmount);
     console.log("🔍 DEBUG: Valor de quant_trimestre:", selectedAmount);
@@ -72,8 +72,11 @@ const GraficoPage = () => {
 
       // Debug: Verificar headers da resposta
       console.log("🔍 DEBUG: Headers da resposta:", response.headers);
-      console.log("🔍 DEBUG: Content-Type:", response.headers['content-type']);
-      console.log("🔍 DEBUG: Content-Disposition:", response.headers['content-disposition']);
+      console.log("🔍 DEBUG: Content-Type:", response.headers["content-type"]);
+      console.log(
+        "🔍 DEBUG: Content-Disposition:",
+        response.headers["content-disposition"]
+      );
       console.log("🔍 DEBUG: Status code:", response.status);
 
       // Verificar se a resposta é válida
@@ -84,14 +87,14 @@ const GraficoPage = () => {
       // Debug: Verificar se é realmente um PDF
       const blob = new Blob([response.data]);
       console.log("📏 Tamanho do blob:", blob.size, "bytes");
-      
+
       // Verificar os primeiros bytes para confirmar se é PDF
       const arrayBuffer = await blob.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
       const firstBytes = uint8Array.slice(0, 4);
       const header = String.fromCharCode(...firstBytes);
       console.log("🔍 Primeiros bytes:", header);
-      
+
       if (header === "%PDF") {
         console.log("✅ Confirmed: É um PDF válido");
       } else {
@@ -103,21 +106,25 @@ const GraficoPage = () => {
       link.href = url;
       link.setAttribute(
         "download",
-        `relatorio_graficos_${selectedAmount}_trimestre_${new Date().toISOString().slice(0, 10)}.pdf`
+        `relatorio_graficos_${selectedAmount}_trimestre_${new Date()
+          .toISOString()
+          .slice(0, 10)}.pdf`
       ); // Nome dinâmico para o download
       document.body.appendChild(link);
       link.click();
       link.parentNode.removeChild(link);
       window.URL.revokeObjectURL(url);
-      
+
       // Mensagem de sucesso
-      alert("Relatório de gráficos gerado com sucesso! O PDF será baixado automaticamente.");
+      alert(
+        "Relatório de gráficos gerado com sucesso! O PDF será baixado automaticamente."
+      );
     } catch (error) {
       console.error("Erro ao fazer upload:", error);
-      
+
       // Tentar ler a mensagem de erro do backend
       let errorMessage = "Ocorreu um erro ao gerar o gráfico.";
-      
+
       if (error.response && error.response.data) {
         try {
           const errorText = await error.response.data.text();
@@ -128,7 +135,7 @@ const GraficoPage = () => {
           // Se não conseguir ler o erro, usar mensagem padrão
         }
       }
-      
+
       alert(errorMessage);
     }
   };

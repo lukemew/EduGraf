@@ -35,7 +35,7 @@
   transform: scale(0.6);
   position: relative;
   padding-left: 2em;
-  margin-bottom: 1.5em;
+  margin-bottom: 0.5em;
 }
 
 .tips-container li::before {
