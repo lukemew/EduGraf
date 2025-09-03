@@ -4,6 +4,7 @@ import Select from "../../components/Select/Select";
 import SmallButton from "../../components/SmallButton/SmallButton";
 import FileUpload from "../../components/FileUpload/FileUpload";
 import Tips from "../../components/Tips/Tips";
+import { useNotificationContext } from "../../contexts/NotificationContext";
 import { useState } from "react";
 import axios from "axios";
 import Tabela from "../../assets/tabela-exemplo.png";
@@ -13,6 +14,7 @@ const TabelasPage = () => {
   //    Inicializamos com 'Polo 1' como padrão.
   const [selectedPolo, setSelectedPolo] = useState("Polo 1");
   const [selectedFile, setSelectedFile] = useState(null);
+  const { showSuccess, showError } = useNotificationContext();
   // 2. Estado para guardar o arquivo selecionado (vindo do componente FileUpload).
 
   const handlePoloChange = (e) => {
@@ -22,7 +24,10 @@ const TabelasPage = () => {
   // Manipulador para o envio do formulário
   const handleUpload = async () => {
     if (!selectedFile) {
-      alert("Por favor, selecione um arquivo primeiro.");
+      showError(
+        "Arquivo não selecionado",
+        "Por favor, selecione um arquivo Excel (.xlsx) antes de continuar."
+      );
       return;
     }
 
@@ -33,6 +38,7 @@ const TabelasPage = () => {
     //    A chave 'polo' e 'file' devem ser as que seu backend espera receber
     formData.append("polo", selectedPolo);
     formData.append("file", selectedFile);
+    formData.append("tipo_processamento", "tabela");  // Forçar processamento como tabela
 
     console.log("🔍 DEBUG: Enviando para o backend:", {
       polo: selectedPolo,
@@ -74,7 +80,10 @@ const TabelasPage = () => {
       window.URL.revokeObjectURL(url);
 
       // Mensagem de sucesso
-      alert("Tabela gerada com sucesso! O download começará automaticamente.");
+      showSuccess(
+        "📊 Tabela Gerada com Sucesso!",
+        `O download da tabela do ${selectedPolo} foi concluído.`
+      );
     } catch (error) {
       console.error("Erro ao fazer upload:", error);
 
@@ -92,7 +101,10 @@ const TabelasPage = () => {
         }
       }
 
-      alert(errorMessage);
+      showError(
+        "❌ Erro ao Gerar Tabela",
+        errorMessage
+      );
     }
   };
 
@@ -123,7 +135,6 @@ const TabelasPage = () => {
         </div>
 
         <img src={Tabela} alt="Pré visualização da tabela" />
-        <SmallButton description={"Salvar tabela"} filled={false} />
       </main>
       <footer>
         <Tips pagina={2} />

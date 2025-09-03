@@ -13,7 +13,8 @@ from app.utils import (
     generate_charts_real,
     generate_charts,
     create_pdf_report,
-    debug_dataframe_sections
+    debug_dataframe_sections,
+    aplicar_formatacao_excel
 )
 
 class Operations:
@@ -219,71 +220,122 @@ class Operations:
         return any(keyword in columns_str for keyword in education_keywords)
     
     def _save_real_format_table(self, processed_data: dict, polo: str) -> str:
-        """Salva tabela do formato real"""
+        """Salva tabela do formato real com formatação profissional"""
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         output_file = os.path.join(
             self.temp_dir, 
             f"tabela_real_{polo.replace(' ', '_')}_{timestamp}.xlsx"
         )
         
-        with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
-            # Aba de Leitura
-            processed_data['leitura'].to_excel(writer, sheet_name='Leitura', index=False)
-            
-            # Aba de Escrita
-            processed_data['escrita'].to_excel(writer, sheet_name='Escrita', index=False)
-            
-            # Estatísticas
-            stats_data = {
-                'Métrica': [
-                    'Total de Anos/Séries',
-                    'Total Alunos (Leitura)',
-                    'Total Alunos (Escrita)',
-                    'Média % Não Leitores',
-                    'Média % Leitores Fluentes'
-                ],
-                'Valor': [
-                    len(processed_data['leitura']),
-                    processed_data['leitura']['total alunos'].sum(),
-                    processed_data['escrita']['total alunos'].sum(),
-                    f"{processed_data['leitura']['nl_%'].mean():.1f}%",
-                    f"{processed_data['leitura']['lcf_%'].mean():.1f}%"
-                ]
-            }
-            
-            stats_df = pd.DataFrame(stats_data)
-            stats_df.to_excel(writer, sheet_name='Resumo', index=False)
+        # Criar workbook com openpyxl para formatação avançada
+        from openpyxl import Workbook
+        from openpyxl.utils.dataframe import dataframe_to_rows
+        
+        wb = Workbook()
+        
+        # Remover planilha padrão
+        wb.remove(wb.active)
+        
+        # Aba de Leitura
+        ws_leitura = wb.create_sheet("Dados de Leitura")
+        for r in dataframe_to_rows(processed_data['leitura'], index=False, header=True):
+            ws_leitura.append(r)
+        aplicar_formatacao_excel(ws_leitura, processed_data['leitura'], 
+                               f"📊 DADOS DE LEITURA - {polo.upper()}", '1abc9c', 'leitura')
+        
+        # Aba de Escrita
+        ws_escrita = wb.create_sheet("Dados de Escrita")
+        for r in dataframe_to_rows(processed_data['escrita'], index=False, header=True):
+            ws_escrita.append(r)
+        aplicar_formatacao_excel(ws_escrita, processed_data['escrita'], 
+                               f"✍️ DADOS DE ESCRITA - {polo.upper()}", '3498db', 'escrita')
+        
+        # Aba de Estatísticas
+        stats_data = {
+            'Métrica': [
+                'Total de Anos/Séries',
+                'Total Alunos (Leitura)',
+                'Total Alunos (Escrita)',
+                'Média % Não Leitores',
+                'Média % Leitores Fluentes',
+                'Média % Pré-Silábicos',
+                'Média % Ortográficos'
+            ],
+            'Valor': [
+                len(processed_data['leitura']),
+                processed_data['leitura']['total alunos'].sum(),
+                processed_data['escrita']['total alunos'].sum(),
+                f"{processed_data['leitura']['nl_%'].mean():.1f}%",
+                f"{processed_data['leitura']['lcf_%'].mean():.1f}%",
+                f"{processed_data['escrita']['p_%'].mean():.1f}%",
+                f"{processed_data['escrita']['o_%'].mean():.1f}%"
+            ]
+        }
+        
+        stats_df = pd.DataFrame(stats_data)
+        ws_stats = wb.create_sheet("Resumo Estatístico")
+        for r in dataframe_to_rows(stats_df, index=False, header=True):
+            ws_stats.append(r)
+        aplicar_formatacao_excel(ws_stats, stats_df, 
+                               f"📈 RESUMO ESTATÍSTICO - {polo.upper()}", 'e74c3c')
+        
+        # Salvar arquivo
+        wb.save(output_file)
         
         return output_file
     
     def _save_old_format_table(self, processed_data: pd.DataFrame, polo: str) -> str:
-        """Salva tabela do formato antigo"""
+        """Salva tabela do formato antigo com formatação profissional"""
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         output_file = os.path.join(
             self.temp_dir, 
             f"tabela_antiga_{polo.replace(' ', '_')}_{timestamp}.xlsx"
         )
         
-        with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
-            processed_data.to_excel(writer, sheet_name='Dados', index=False)
+        # Criar workbook com openpyxl para formatação avançada
+        from openpyxl import Workbook
+        from openpyxl.utils.dataframe import dataframe_to_rows
+        
+        wb = Workbook()
+        
+        # Remover planilha padrão
+        wb.remove(wb.active)
+        
+        # Aba de Dados Consolidados
+        ws_dados = wb.create_sheet("Dados Consolidados")
+        for r in dataframe_to_rows(processed_data, index=False, header=True):
+            ws_dados.append(r)
+        aplicar_formatacao_excel(ws_dados, processed_data, 
+                               f"📋 DADOS CONSOLIDADOS - {polo.upper()}", '1abc9c', 'leitura')
+        
+        # Estatísticas básicas
+        if not processed_data.empty:
+            stats_data = {
+                'Métrica': [
+                    'Total de Escolas',
+                    'Total de Alunos',
+                    'Média Alunos/Escola',
+                    'Escola com Mais Alunos',
+                    'Escola com Menos Alunos'
+                ],
+                'Valor': [
+                    len(processed_data),
+                    processed_data['Total Alunos'].sum() if 'Total Alunos' in processed_data.columns else 0,
+                    f"{processed_data['Total Alunos'].mean():.1f}" if 'Total Alunos' in processed_data.columns else "N/A",
+                    processed_data.loc[processed_data['Total Alunos'].idxmax(), 'Escola'] if 'Total Alunos' in processed_data.columns else "N/A",
+                    processed_data.loc[processed_data['Total Alunos'].idxmin(), 'Escola'] if 'Total Alunos' in processed_data.columns else "N/A"
+                ]
+            }
             
-            # Estatísticas básicas
-            if not processed_data.empty:
-                stats_data = {
-                    'Métrica': [
-                        'Total de Escolas',
-                        'Total de Alunos',
-                        'Média Alunos/Escola'
-                    ],
-                    'Valor': [
-                        len(processed_data),
-                        processed_data['Total Alunos'].sum() if 'Total Alunos' in processed_data.columns else 0,
-                        f"{processed_data['Total Alunos'].mean():.1f}" if 'Total Alunos' in processed_data.columns else "N/A"
-                    ]
-                }
-                
-                stats_df = pd.DataFrame(stats_data)
-                stats_df.to_excel(writer, sheet_name='Resumo', index=False)
+            stats_df = pd.DataFrame(stats_data)
+            ws_stats = wb.create_sheet("Resumo Estatístico")
+            for r in dataframe_to_rows(stats_df, index=False, header=True):
+                ws_stats.append(r)
+            aplicar_formatacao_excel(ws_stats, stats_df, 
+                                   f"📈 RESUMO ESTATÍSTICO - {polo.upper()}", 'e74c3c')
+        
+        # Salvar arquivo
+        wb.save(output_file)
         
         return output_file
 

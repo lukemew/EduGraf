@@ -14,6 +14,10 @@ from reportlab.lib.units import inch
 import os
 from datetime import datetime
 from io import BytesIO
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils.dataframe import dataframe_to_rows
+from openpyxl.worksheet.table import Table, TableStyleInfo
 
 # Configuração do matplotlib para não usar interface gráfica
 plt.switch_backend('Agg')
@@ -21,6 +25,262 @@ plt.switch_backend('Agg')
 # Configurar estilo dos gráficos
 plt.style.use('default')
 sns.set_palette("husl")
+
+def aplicar_formatacao_excel(worksheet, df, titulo, cor_cabecalho='1abc9c', tipo_dados='leitura'):
+    """
+    Aplica formatação profissional a uma planilha Excel
+    
+    Args:
+        worksheet: Worksheet do openpyxl
+        df: DataFrame com os dados
+        titulo: Título da planilha
+        cor_cabecalho: Cor do cabeçalho (hex)
+        tipo_dados: 'leitura' ou 'escrita' para adicionar legendas
+    """
+    # Cores do projeto EduGraf
+    cores = {
+        'primaria': '3d626d',
+        'secundaria': '165b70', 
+        'destaque': '1abc9c',
+        'fundo_claro': 'f8f9fa',
+        'texto_escuro': '333333',
+        'borda': 'dee2e6'
+    }
+    
+    # Estilos de fonte
+    fonte_titulo = Font(name='Arial', size=16, bold=True, color='FFFFFF')
+    fonte_cabecalho = Font(name='Arial', size=12, bold=True, color='FFFFFF')
+    fonte_normal = Font(name='Arial', size=11, color=cores['texto_escuro'])
+    fonte_numero = Font(name='Arial', size=11, color=cores['texto_escuro'])
+    
+    # Estilos de preenchimento
+    preenchimento_titulo = PatternFill(start_color=cores['secundaria'], end_color=cores['secundaria'], fill_type='solid')
+    preenchimento_cabecalho = PatternFill(start_color=cor_cabecalho, end_color=cor_cabecalho, fill_type='solid')
+    preenchimento_linha_par = PatternFill(start_color=cores['fundo_claro'], end_color=cores['fundo_claro'], fill_type='solid')
+    
+    # Estilos de alinhamento
+    alinhamento_centro = Alignment(horizontal='center', vertical='center')
+    alinhamento_esquerda = Alignment(horizontal='left', vertical='center')
+    alinhamento_direita = Alignment(horizontal='right', vertical='center')
+    
+    # Estilos de borda
+    borda_fina = Border(
+        left=Side(style='thin', color=cores['borda']),
+        right=Side(style='thin', color=cores['borda']),
+        top=Side(style='thin', color=cores['borda']),
+        bottom=Side(style='thin', color=cores['borda'])
+    )
+    
+    # Adicionar título
+    # Calcular o número de colunas necessárias para o título
+    num_colunas = len(df.columns) if len(df.columns) > 0 else 8
+    ultima_coluna = chr(65 + num_colunas - 1)  # A, B, C, etc.
+    
+    worksheet.merge_cells(f'A1:{ultima_coluna}1')
+    cell_titulo = worksheet['A1']
+    cell_titulo.value = titulo
+    cell_titulo.font = fonte_titulo
+    cell_titulo.fill = preenchimento_titulo
+    cell_titulo.alignment = alinhamento_centro
+    
+    # Função para formatar nomes das colunas
+    def formatar_nome_coluna(nome):
+        """Formata o nome da coluna para melhor apresentação"""
+        formatacoes = {
+            'ano': 'Ano',
+            'total alunos': 'Total de Alunos',
+            'nl': 'NL',
+            'ls': 'LS', 
+            'lp': 'LP',
+            'lf': 'LF',
+            'lsf': 'LSF',
+            'lcf': 'LCF',
+            'p': 'P',
+            's': 'S',
+            's.a.': 'S.A.',
+            'a': 'A',
+            'o': 'O',
+            'nl_%': 'NL %',
+            'ls_%': 'LS %',
+            'lp_%': 'LP %',
+            'lf_%': 'LF %',
+            'lsf_%': 'LSF %',
+            'lcf_%': 'LCF %',
+            'p_%': 'P %',
+            's_%': 'S %',
+            's.a._%': 'S.A. %',
+            'a_%': 'A %',
+            'o_%': 'O %'
+        }
+        return formatacoes.get(nome.lower(), nome.title())
+    
+    # Aplicar formatação aos cabeçalhos
+    for col_num, column_title in enumerate(df.columns, 1):
+        cell = worksheet.cell(row=2, column=col_num)
+        cell.value = formatar_nome_coluna(column_title)
+        cell.font = fonte_cabecalho
+        cell.fill = preenchimento_cabecalho
+        cell.alignment = alinhamento_centro
+        cell.border = borda_fina
+    
+    # Aplicar formatação aos dados
+    for row_num in range(3, len(df) + 3):
+        for col_num in range(1, len(df.columns) + 1):
+            cell = worksheet.cell(row=row_num, column=col_num)
+            cell.font = fonte_normal
+            cell.border = borda_fina
+            
+            # Alternar cores das linhas
+            if row_num % 2 == 0:
+                cell.fill = preenchimento_linha_par
+            
+            # Alinhamento baseado no tipo de dados
+            if col_num == 1:  # Primeira coluna (geralmente texto)
+                cell.alignment = alinhamento_esquerda
+            else:  # Colunas numéricas
+                cell.alignment = alinhamento_direita
+                # Formatar números
+                if isinstance(cell.value, (int, float)):
+                    if cell.value < 1:  # Percentuais
+                        cell.number_format = '0.0%'
+                    else:  # Números inteiros
+                        cell.number_format = '#,##0'
+    
+    # Ajustar largura das colunas com valores mínimos
+    larguras_minimas = {
+        'A': 8,   # Ano
+        'B': 15,  # Total de Alunos
+        'C': 8,   # NL, LS, etc.
+        'D': 8,   # Percentuais
+        'E': 8,
+        'F': 8,
+        'G': 8,
+        'H': 8,
+        'I': 8,
+        'J': 8,
+        'K': 8,
+        'L': 8,
+        'M': 8,
+        'N': 8
+    }
+    
+    for col_idx, column in enumerate(worksheet.columns):
+        max_length = 0
+        column_letter = None
+        
+        # Encontrar a primeira célula não mesclada para obter a letra da coluna
+        for cell in column:
+            try:
+                if hasattr(cell, 'column_letter'):
+                    column_letter = cell.column_letter
+                    break
+            except:
+                continue
+        
+        if column_letter is None:
+            continue
+            
+        for cell in column:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        
+        # Usar largura mínima ou calculada, o que for maior
+        largura_minima = larguras_minimas.get(column_letter, 10)
+        adjusted_width = max(largura_minima, min(max_length + 3, 25))
+        worksheet.column_dimensions[column_letter].width = adjusted_width
+    
+    # Adicionar filtros
+    if len(df) > 0 and len(df.columns) > 0:
+        ultima_coluna = chr(65 + len(df.columns) - 1)
+        ultima_linha = len(df) + 2
+        worksheet.auto_filter.ref = f"A2:{ultima_coluna}{ultima_linha}"
+    
+    # Adicionar legendas explicativas
+    linha_legenda = len(df) + 4  # 2 linhas após os dados
+    
+    # Título da legenda
+    cell_legenda_titulo = worksheet.cell(row=linha_legenda, column=1)
+    cell_legenda_titulo.value = "📚 LEGENDA - SIGNIFICADO DAS ABREVIAÇÕES"
+    cell_legenda_titulo.font = Font(name='Arial', size=12, bold=True, color='FFFFFF')
+    cell_legenda_titulo.fill = PatternFill(start_color=cores['secundaria'], end_color=cores['secundaria'], fill_type='solid')
+    cell_legenda_titulo.alignment = alinhamento_centro
+    
+    # Mesclar células do título da legenda
+    ultima_coluna_legenda = chr(65 + min(len(df.columns) - 1, 6))  # Máximo 7 colunas
+    worksheet.merge_cells(f'A{linha_legenda}:{ultima_coluna_legenda}{linha_legenda}')
+    
+    if tipo_dados == 'leitura':
+        # Legendas para leitura
+        legendas_leitura = [
+            ("NL", "Não Leitor - Aluno que não consegue ler"),
+            ("LS", "Leitor Silábico - Lê sílaba por sílaba"),
+            ("LP", "Leitor Palavra - Lê palavra por palavra"),
+            ("LF", "Leitor Frase - Lê frase por frase"),
+            ("LSF", "Leitor Silábico com Fluência - Lê sílabas com fluência"),
+            ("LCF", "Leitor com Fluência - Lê com fluência total")
+        ]
+        
+        for idx, (abrev, descricao) in enumerate(legendas_leitura):
+            linha_atual = linha_legenda + 1 + idx
+            
+            # Abreviação
+            cell_abrev = worksheet.cell(row=linha_atual, column=1)
+            cell_abrev.value = abrev
+            cell_abrev.font = Font(name='Arial', size=11, bold=True, color=cores['texto_escuro'])
+            cell_abrev.fill = PatternFill(start_color='f0f8ff', end_color='f0f8ff', fill_type='solid')
+            cell_abrev.alignment = alinhamento_centro
+            cell_abrev.border = borda_fina
+            
+            # Descrição
+            cell_desc = worksheet.cell(row=linha_atual, column=2)
+            cell_desc.value = descricao
+            cell_desc.font = Font(name='Arial', size=10, color=cores['texto_escuro'])
+            cell_desc.fill = PatternFill(start_color='f0f8ff', end_color='f0f8ff', fill_type='solid')
+            cell_desc.alignment = alinhamento_esquerda
+            cell_desc.border = borda_fina
+            
+            # Mesclar células da descrição
+            worksheet.merge_cells(f'B{linha_atual}:{ultima_coluna_legenda}{linha_atual}')
+    
+    elif tipo_dados == 'escrita':
+        # Legendas para escrita
+        legendas_escrita = [
+            ("P", "Pré-Silábico - Não relaciona som e letra"),
+            ("S", "Silábico - Escreve uma letra por sílaba"),
+            ("S.A.", "Silábico Alfabético - Mistura sílaba e letra"),
+            ("A", "Alfabético - Escreve todas as letras"),
+            ("O", "Ortográfico - Escreve corretamente")
+        ]
+        
+        for idx, (abrev, descricao) in enumerate(legendas_escrita):
+            linha_atual = linha_legenda + 1 + idx
+            
+            # Abreviação
+            cell_abrev = worksheet.cell(row=linha_atual, column=1)
+            cell_abrev.value = abrev
+            cell_abrev.font = Font(name='Arial', size=11, bold=True, color=cores['texto_escuro'])
+            cell_abrev.fill = PatternFill(start_color='f0f8ff', end_color='f0f8ff', fill_type='solid')
+            cell_abrev.alignment = alinhamento_centro
+            cell_abrev.border = borda_fina
+            
+            # Descrição
+            cell_desc = worksheet.cell(row=linha_atual, column=2)
+            cell_desc.value = descricao
+            cell_desc.font = Font(name='Arial', size=10, color=cores['texto_escuro'])
+            cell_desc.fill = PatternFill(start_color='f0f8ff', end_color='f0f8ff', fill_type='solid')
+            cell_desc.alignment = alinhamento_esquerda
+            cell_desc.border = borda_fina
+            
+            # Mesclar células da descrição
+            worksheet.merge_cells(f'B{linha_atual}:{ultima_coluna_legenda}{linha_atual}')
+    
+    # Congelar painéis (cabeçalho sempre visível)
+    worksheet.freeze_panes = 'A3'
+    
+    return worksheet
 
 def criar_dataframe(arquivo_em_bytes, linhas_a_serem_puladas, colunas_a_serem_usadas):
     """
@@ -394,7 +654,7 @@ def process_excel_file(df: pd.DataFrame, polo: str) -> pd.DataFrame:
 
 def generate_charts_real(data: Dict[str, Any], quant_trimestre: int) -> Dict[str, Any]:
     """
-    Gera gráficos baseados no formato real da planilha da prefeitura
+    Gera gráficos estilizados e profissionais baseados no formato real da planilha da prefeitura
     
     Args:
         data: Dados processados (leitura e escrita)
@@ -404,83 +664,165 @@ def generate_charts_real(data: Dict[str, Any], quant_trimestre: int) -> Dict[str
         Dicionário com gráficos e análises
     """
     try:
+        print(f"🔍 DEBUG: Iniciando geração de gráficos para {quant_trimestre}º trimestre")
+        
         charts_data = {}
         
         df_leitura = data['leitura']
         df_escrita = data['escrita']
         
-        # Gráfico 1: Níveis de Leitura por Ano
-        fig1, ax1 = plt.subplots(figsize=(12, 8))
+        # Configurar estilo global dos gráficos
+        plt.style.use('default')
+        sns.set_palette("husl")
+        
+        # Cores do sistema EduGraf
+        cores_sistema = {
+            'primaria': '#165b70',
+            'secundaria': '#3d626d', 
+            'destaque': '#1abc9c',
+            'accent': '#3498db',
+            'warning': '#f39c12',
+            'danger': '#e74c3c',
+            'success': '#2ecc71',
+            'info': '#9b59b6'
+        }
+        
+        # Cores específicas para os níveis
+        cores_leitura = ['#e74c3c', '#f39c12', '#3498db', '#2ecc71', '#9b59b6', '#1abc9c']
+        cores_escrita = ['#e74c3c', '#f39c12', '#3498db', '#2ecc71', '#1abc9c']
+        
+        # Garantir que o diretório temp existe
+        os.makedirs("temp", exist_ok=True)
+        
+        # Gráfico 1: Níveis de Leitura por Ano (Estilizado)
+        print("🔍 DEBUG: Gerando gráfico de leitura...")
+        fig1, ax1 = plt.subplots(figsize=(14, 9))
+        fig1.patch.set_facecolor('white')
         
         anos = df_leitura['ano'].astype(str)
         x = np.arange(len(anos))
-        width = 0.15
+        width = 0.12
         
-        # Criar gráfico de barras empilhadas para leitura
-        ax1.bar(x - 2.5*width, df_leitura['nl'], width, label='NL (Não Leitor)', color='#ff6b6b')
-        ax1.bar(x - 1.5*width, df_leitura['ls'], width, label='LS (Leitor de Sílabas)', color='#4ecdc4')
-        ax1.bar(x - 0.5*width, df_leitura['lp'], width, label='LP (Leitor de Palavras)', color='#45b7d1')
-        ax1.bar(x + 0.5*width, df_leitura['lf'], width, label='LF (Leitor de Frases)', color='#96ceb4')
-        ax1.bar(x + 1.5*width, df_leitura['lsf'], width, label='LSF (Leitor Sem Fluência)', color='#feca57')
-        ax1.bar(x + 2.5*width, df_leitura['lcf'], width, label='LCF (Leitor Com Fluência)', color='#ff9ff3')
+        # Criar gráfico de barras estilizado para leitura
+        bars1 = ax1.bar(x - 2.5*width, df_leitura['nl'], width, label='NL (Não Leitor)', 
+                       color=cores_leitura[0], alpha=0.8, edgecolor='white', linewidth=1)
+        bars2 = ax1.bar(x - 1.5*width, df_leitura['ls'], width, label='LS (Leitor de Sílabas)', 
+                       color=cores_leitura[1], alpha=0.8, edgecolor='white', linewidth=1)
+        bars3 = ax1.bar(x - 0.5*width, df_leitura['lp'], width, label='LP (Leitor de Palavras)', 
+                       color=cores_leitura[2], alpha=0.8, edgecolor='white', linewidth=1)
+        bars4 = ax1.bar(x + 0.5*width, df_leitura['lf'], width, label='LF (Leitor de Frases)', 
+                       color=cores_leitura[3], alpha=0.8, edgecolor='white', linewidth=1)
+        bars5 = ax1.bar(x + 1.5*width, df_leitura['lsf'], width, label='LSF (Leitor Sem Fluência)', 
+                       color=cores_leitura[4], alpha=0.8, edgecolor='white', linewidth=1)
+        bars6 = ax1.bar(x + 2.5*width, df_leitura['lcf'], width, label='LCF (Leitor Com Fluência)', 
+                       color=cores_leitura[5], alpha=0.8, edgecolor='white', linewidth=1)
         
-        ax1.set_xlabel('Anos/Séries')
-        ax1.set_ylabel('Quantidade de Alunos')
-        ax1.set_title(f'Diagnóstico de Leitura - {quant_trimestre}º Trimestre')
+        # Estilizar eixos e títulos
+        ax1.set_xlabel('Anos/Séries', fontsize=12, fontweight='bold', color=cores_sistema['primaria'])
+        ax1.set_ylabel('Quantidade de Alunos', fontsize=12, fontweight='bold', color=cores_sistema['primaria'])
+        ax1.set_title(f'Diagnóstico de Leitura - {quant_trimestre}º Trimestre', 
+                     fontsize=16, fontweight='bold', color=cores_sistema['primaria'], pad=20)
+        
+        # Configurar ticks
         ax1.set_xticks(x)
-        ax1.set_xticklabels(anos, rotation=45, ha='right')
-        ax1.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-        ax1.grid(True, alpha=0.3)
+        ax1.set_xticklabels(anos, rotation=45, ha='right', fontsize=10)
+        ax1.tick_params(axis='y', labelsize=10)
         
+        # Configurar legenda
+        ax1.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=9, frameon=True, 
+                  fancybox=True, shadow=True)
+        
+        # Configurar grid
+        ax1.grid(True, alpha=0.3, linestyle='--', color=cores_sistema['secundaria'])
+        ax1.set_axisbelow(True)
+        
+        # Adicionar valores nas barras
+        for bars in [bars1, bars2, bars3, bars4, bars5, bars6]:
+            for bar in bars:
+                height = bar.get_height()
+                if height > 0:
+                    ax1.text(bar.get_x() + bar.get_width()/2., height + 0.1,
+                            f'{int(height)}', ha='center', va='bottom', fontsize=8, fontweight='bold')
+        
+        # Configurar layout
         plt.tight_layout()
         
         # Salvar gráfico
         chart1_path = f"temp/leitura_real_chart_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-        fig1.savefig(chart1_path, dpi=300, bbox_inches='tight')
+        fig1.savefig(chart1_path, dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
         plt.close(fig1)
         
         charts_data['leitura_chart'] = {
             'path': chart1_path,
             'title': f'Diagnóstico de Leitura - {quant_trimestre}º Trimestre',
-            'description': f'Gráfico mostrando a distribuição dos níveis de leitura por ano/série. Total de {len(df_leitura)} anos analisados.'
+            'description': f'Análise detalhada da distribuição dos níveis de leitura por ano/série. O gráfico apresenta {len(df_leitura)} anos/séries avaliados, mostrando a evolução do desenvolvimento da leitura desde não leitores até leitores com fluência total.'
         }
         
-        # Gráfico 2: Níveis de Escrita por Ano
-        fig2, ax2 = plt.subplots(figsize=(12, 8))
+        # Gráfico 2: Níveis de Escrita por Ano (Estilizado)
+        print("🔍 DEBUG: Gerando gráfico de escrita...")
+        fig2, ax2 = plt.subplots(figsize=(14, 9))
+        fig2.patch.set_facecolor('white')
         
         anos_escrita = df_escrita['ano'].astype(str)
         x = np.arange(len(anos_escrita))
         
-        # Criar gráfico de barras empilhadas para escrita
-        ax2.bar(x - 2*width, df_escrita['p'], width, label='P (Pré-Silábico)', color='#ff6b6b')
-        ax2.bar(x - width, df_escrita['s'], width, label='S (Silábico)', color='#4ecdc4')
-        ax2.bar(x, df_escrita['s.a.'], width, label='S.A. (Silábico Alfabético)', color='#45b7d1')
-        ax2.bar(x + width, df_escrita['a'], width, label='A (Alfabético)', color='#96ceb4')
-        ax2.bar(x + 2*width, df_escrita['o'], width, label='O (Ortográfico)', color='#feca57')
+        # Criar gráfico de barras estilizado para escrita
+        bars1 = ax2.bar(x - 2*width, df_escrita['p'], width, label='P (Pré-Silábico)', 
+                       color=cores_escrita[0], alpha=0.8, edgecolor='white', linewidth=1)
+        bars2 = ax2.bar(x - width, df_escrita['s'], width, label='S (Silábico)', 
+                       color=cores_escrita[1], alpha=0.8, edgecolor='white', linewidth=1)
+        bars3 = ax2.bar(x, df_escrita['s.a.'], width, label='S.A. (Silábico Alfabético)', 
+                       color=cores_escrita[2], alpha=0.8, edgecolor='white', linewidth=1)
+        bars4 = ax2.bar(x + width, df_escrita['a'], width, label='A (Alfabético)', 
+                       color=cores_escrita[3], alpha=0.8, edgecolor='white', linewidth=1)
+        bars5 = ax2.bar(x + 2*width, df_escrita['o'], width, label='O (Ortográfico)', 
+                       color=cores_escrita[4], alpha=0.8, edgecolor='white', linewidth=1)
         
-        ax2.set_xlabel('Anos/Séries')
-        ax2.set_ylabel('Quantidade de Alunos')
-        ax2.set_title(f'Diagnóstico de Escrita - {quant_trimestre}º Trimestre')
+        # Estilizar eixos e títulos
+        ax2.set_xlabel('Anos/Séries', fontsize=12, fontweight='bold', color=cores_sistema['primaria'])
+        ax2.set_ylabel('Quantidade de Alunos', fontsize=12, fontweight='bold', color=cores_sistema['primaria'])
+        ax2.set_title(f'Diagnóstico de Escrita - {quant_trimestre}º Trimestre', 
+                     fontsize=16, fontweight='bold', color=cores_sistema['primaria'], pad=20)
+        
+        # Configurar ticks
         ax2.set_xticks(x)
-        ax2.set_xticklabels(anos_escrita, rotation=45, ha='right')
-        ax2.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-        ax2.grid(True, alpha=0.3)
+        ax2.set_xticklabels(anos_escrita, rotation=45, ha='right', fontsize=10)
+        ax2.tick_params(axis='y', labelsize=10)
         
+        # Configurar legenda
+        ax2.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=9, frameon=True, 
+                  fancybox=True, shadow=True)
+        
+        # Configurar grid
+        ax2.grid(True, alpha=0.3, linestyle='--', color=cores_sistema['secundaria'])
+        ax2.set_axisbelow(True)
+        
+        # Adicionar valores nas barras
+        for bars in [bars1, bars2, bars3, bars4, bars5]:
+            for bar in bars:
+                height = bar.get_height()
+                if height > 0:
+                    ax2.text(bar.get_x() + bar.get_width()/2., height + 0.1,
+                            f'{int(height)}', ha='center', va='bottom', fontsize=8, fontweight='bold')
+        
+        # Configurar layout
         plt.tight_layout()
         
         # Salvar gráfico
         chart2_path = f"temp/escrita_real_chart_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-        fig2.savefig(chart2_path, dpi=300, bbox_inches='tight')
+        fig2.savefig(chart2_path, dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
         plt.close(fig2)
         
         charts_data['escrita_chart'] = {
             'path': chart2_path,
             'title': f'Diagnóstico de Escrita - {quant_trimestre}º Trimestre',
-            'description': f'Gráfico mostrando a distribuição dos níveis de escrita por ano/série. Total de {len(df_escrita)} anos analisados.'
+            'description': f'Análise detalhada da distribuição dos níveis de escrita por ano/série. O gráfico apresenta {len(df_escrita)} anos/séries avaliados, mostrando a evolução do desenvolvimento da escrita desde pré-silábicos até ortográficos.'
         }
         
-        # Gráfico 3: Comparação Geral Leitura vs Escrita
-        fig3, ax3 = plt.subplots(figsize=(10, 6))
+        # Gráfico 3: Comparação Geral Leitura vs Escrita (Estilizado)
+        print("🔍 DEBUG: Gerando gráfico de comparação...")
+        fig3, ax3 = plt.subplots(figsize=(12, 8))
+        fig3.patch.set_facecolor('white')
         
         # Calcular totais gerais
         total_leitura = df_leitura[['nl', 'ls', 'lp', 'lf', 'lsf', 'lcf']].sum()
@@ -489,35 +831,103 @@ def generate_charts_real(data: Dict[str, Any], quant_trimestre: int) -> Dict[str
         categorias_leitura = ['NL', 'LS', 'LP', 'LF', 'LSF', 'LCF']
         categorias_escrita = ['P', 'S', 'S.A.', 'A', 'O']
         
-        # Usar apenas as primeiras 5 categorias para comparação (mesmo número de categorias de escrita)
+        # Usar apenas as primeiras 5 categorias para comparação
         categorias_comparacao = categorias_leitura[:5]
         total_leitura_comparacao = total_leitura.values[:5]
         total_escrita_comparacao = total_escrita.values
         
         x_pos = np.arange(len(categorias_comparacao))
         
-        ax3.bar(x_pos, total_leitura_comparacao, label='Leitura', color='#1abc9c', alpha=0.7)
-        ax3.bar(x_pos + 0.4, total_escrita_comparacao, label='Escrita', color='#3498db', alpha=0.7)
+        # Criar gráfico de comparação estilizado
+        bars1 = ax3.bar(x_pos - 0.2, total_leitura_comparacao, 0.4, label='📚 Leitura', 
+                       color=cores_sistema['destaque'], alpha=0.8, edgecolor='white', linewidth=1)
+        bars2 = ax3.bar(x_pos + 0.2, total_escrita_comparacao, 0.4, label='✍️ Escrita', 
+                       color=cores_sistema['accent'], alpha=0.8, edgecolor='white', linewidth=1)
         
-        ax3.set_xlabel('Níveis')
-        ax3.set_ylabel('Quantidade de Alunos')
-        ax3.set_title('Comparação Geral: Leitura vs Escrita')
-        ax3.set_xticks(x_pos + 0.2)
-        ax3.set_xticklabels(categorias_comparacao)
-        ax3.legend()
-        ax3.grid(True, alpha=0.3)
+        # Estilizar eixos e títulos
+        ax3.set_xlabel('Níveis de Desenvolvimento', fontsize=12, fontweight='bold', color=cores_sistema['primaria'])
+        ax3.set_ylabel('Quantidade de Alunos', fontsize=12, fontweight='bold', color=cores_sistema['primaria'])
+        ax3.set_title('Comparação Geral: Leitura vs Escrita', 
+                     fontsize=16, fontweight='bold', color=cores_sistema['primaria'], pad=20)
         
+        # Configurar ticks
+        ax3.set_xticks(x_pos)
+        ax3.set_xticklabels(categorias_comparacao, fontsize=10)
+        ax3.tick_params(axis='y', labelsize=10)
+        
+        # Configurar legenda
+        ax3.legend(fontsize=11, frameon=True, fancybox=True, shadow=True)
+        
+        # Configurar grid
+        ax3.grid(True, alpha=0.3, linestyle='--', color=cores_sistema['secundaria'])
+        ax3.set_axisbelow(True)
+        
+        # Adicionar valores nas barras
+        for bars in [bars1, bars2]:
+            for bar in bars:
+                height = bar.get_height()
+                if height > 0:
+                    ax3.text(bar.get_x() + bar.get_width()/2., height + max(total_leitura_comparacao.max(), total_escrita_comparacao.max()) * 0.01,
+                            f'{int(height)}', ha='center', va='bottom', fontsize=9, fontweight='bold')
+        
+        # Configurar layout
         plt.tight_layout()
         
         # Salvar gráfico
         chart3_path = f"temp/comparacao_real_chart_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-        fig3.savefig(chart3_path, dpi=300, bbox_inches='tight')
+        fig3.savefig(chart3_path, dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
         plt.close(fig3)
         
         charts_data['comparacao_chart'] = {
             'path': chart3_path,
             'title': 'Comparação Geral: Leitura vs Escrita',
-            'description': 'Comparação direta entre os níveis de leitura e escrita em todos os anos.'
+            'description': 'Análise comparativa entre os níveis de leitura e escrita, permitindo identificar correlações e áreas que necessitam de atenção pedagógica específica.'
+        }
+        
+        # Gráfico 4: Resumo Estatístico (Novo - mais simples)
+        print("🔍 DEBUG: Gerando gráfico de resumo...")
+        fig4, ax4 = plt.subplots(figsize=(12, 8))
+        fig4.patch.set_facecolor('white')
+        
+        # Dados para o gráfico de resumo
+        categorias = ['Não Leitores', 'Leitores Fluentes', 'Pré-Silábicos', 'Ortográficos']
+        valores = [
+            total_leitura['nl'],
+            total_leitura['lcf'], 
+            total_escrita['p'],
+            total_escrita['o']
+        ]
+        cores_resumo = ['#e74c3c', '#2ecc71', '#f39c12', '#3498db']
+        
+        # Criar gráfico de barras horizontal
+        bars = ax4.barh(categorias, valores, color=cores_resumo, alpha=0.8, edgecolor='white', linewidth=1)
+        
+        # Estilizar
+        ax4.set_xlabel('Quantidade de Alunos', fontsize=12, fontweight='bold', color=cores_sistema['primaria'])
+        ax4.set_title('Resumo dos Principais Indicadores', fontsize=16, fontweight='bold', color=cores_sistema['primaria'], pad=20)
+        
+        # Adicionar valores nas barras
+        for i, (bar, valor) in enumerate(zip(bars, valores)):
+            if valor > 0:
+                ax4.text(bar.get_width() + max(valores) * 0.01, bar.get_y() + bar.get_height()/2,
+                        f'{int(valor)}', ha='left', va='center', fontsize=11, fontweight='bold')
+        
+        # Configurar grid
+        ax4.grid(True, alpha=0.3, linestyle='--', color=cores_sistema['secundaria'], axis='x')
+        ax4.set_axisbelow(True)
+        
+        # Configurar layout
+        plt.tight_layout()
+        
+        # Salvar gráfico
+        chart4_path = f"temp/resumo_real_chart_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+        fig4.savefig(chart4_path, dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
+        plt.close(fig4)
+        
+        charts_data['resumo_chart'] = {
+            'path': chart4_path,
+            'title': 'Resumo dos Principais Indicadores',
+            'description': 'Visão geral dos principais indicadores educacionais, destacando os pontos que necessitam de maior atenção pedagógica.'
         }
         
         # Adicionar análises estatísticas
@@ -534,9 +944,14 @@ def generate_charts_real(data: Dict[str, Any], quant_trimestre: int) -> Dict[str
             'media_escrita_o': (total_escrita['o'] / total_alunos_escrita * 100) if total_alunos_escrita > 0 else 0
         }
         
+        print(f"🔍 DEBUG: Gráficos gerados com sucesso! Total: {len(charts_data) - 1} gráficos")
+        
         return charts_data
         
     except Exception as e:
+        print(f"🔍 DEBUG: Erro na geração dos gráficos reais: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise Exception(f"Erro na geração dos gráficos reais: {str(e)}")
 
 def generate_charts(df: pd.DataFrame, quant_trimestre: int) -> Dict[str, Any]:
@@ -722,7 +1137,7 @@ def generate_charts(df: pd.DataFrame, quant_trimestre: int) -> Dict[str, Any]:
 
 def create_pdf_report(charts_data: Dict[str, Any], quant_trimestre: int) -> str:
     """
-    Cria relatório PDF com gráficos e análises
+    Cria relatório PDF profissional com gráficos e análises detalhadas
     
     Args:
         charts_data: Dados dos gráficos
@@ -732,178 +1147,275 @@ def create_pdf_report(charts_data: Dict[str, Any], quant_trimestre: int) -> str:
         Caminho do arquivo PDF gerado
     """
     try:
-        # Criar nome do arquivo PDF
-        pdf_path = f"temp/relatorio_graficos_{quant_trimestre}_trimestre_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        print(f"🔍 DEBUG: Iniciando criação do PDF para {quant_trimestre}º trimestre")
         
-        # Criar documento PDF
-        doc = SimpleDocTemplate(pdf_path, pagesize=A4)
+        # Criar nome do arquivo PDF
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        pdf_path = f"temp/relatorio_graficos_{quant_trimestre}_trimestre_{timestamp}.pdf"
+        
+        # Garantir que o diretório temp existe
+        os.makedirs("temp", exist_ok=True)
+        
+        print(f"🔍 DEBUG: Caminho do PDF: {pdf_path}")
+        
+        # Criar documento PDF com margens otimizadas para centralização
+        doc = SimpleDocTemplate(
+            pdf_path, 
+            pagesize=A4,
+            rightMargin=50,
+            leftMargin=50,
+            topMargin=60,
+            bottomMargin=60
+        )
+        
         styles = getSampleStyleSheet()
         story = []
         
-        # Estilo personalizado para título
+        # Estilos personalizados com cores do sistema - melhorados
         title_style = ParagraphStyle(
             'CustomTitle',
             parent=styles['Heading1'],
             fontSize=28,
-            spaceAfter=30,
+            spaceAfter=25,
             alignment=1,  # Centralizado
-            textColor=colors.HexColor('#165b70')
+            textColor=colors.HexColor('#165b70'),
+            fontName='Helvetica-Bold'
         )
         
-        # Estilo para subtítulos
         subtitle_style = ParagraphStyle(
             'CustomSubtitle',
             parent=styles['Heading2'],
-            fontSize=16,
-            spaceAfter=15,
-            textColor=colors.HexColor('#3d626d')
+            fontSize=18,
+            spaceAfter=12,
+            alignment=1,  # Centralizado
+            textColor=colors.HexColor('#3d626d'),
+            fontName='Helvetica-Bold'
         )
         
-        # Estilo para texto normal
         normal_style = ParagraphStyle(
             'CustomNormal',
             parent=styles['Normal'],
-            fontSize=11,
-            spaceAfter=8,
-            textColor=colors.HexColor('#333333')
+            fontSize=12,
+            spaceAfter=10,
+            alignment=0,  # Justificado
+            textColor=colors.HexColor('#333333'),
+            fontName='Helvetica'
         )
         
-        # Cabeçalho
-        story.append(Paragraph("📊 EDUGRAF - SISTEMA DE DIAGNÓSTICO EDUCACIONAL", title_style))
-        story.append(Spacer(1, 20))
+        # Estilo para legendas - melhorado
+        legend_style = ParagraphStyle(
+            'Legend',
+            parent=styles['Normal'],
+            fontSize=11,
+            spaceAfter=8,
+            textColor=colors.HexColor('#666666'),
+            fontName='Helvetica-Oblique',
+            alignment=1  # Centralizado
+        )
         
-        # Informações do relatório
-        story.append(Paragraph(f"📋 <b>Relatório de Gráficos - {quant_trimestre}º Trimestre</b>", subtitle_style))
+        # Cabeçalho principal - melhorado
+        story.append(Paragraph("EDUGRAF", title_style))
+        story.append(Paragraph("Sistema de Diagnóstico Educacional", subtitle_style))
+        story.append(Spacer(1, 30))
+        
+        # Informações do relatório - centralizadas
+        story.append(Paragraph(f"<b>RELATÓRIO DE GRÁFICOS - {quant_trimestre}º TRIMESTRE</b>", subtitle_style))
+        story.append(Spacer(1, 15))
         story.append(Paragraph(f"<b>Data de Geração:</b> {datetime.now().strftime('%d/%m/%Y às %H:%M')}", normal_style))
-        story.append(Spacer(1, 20))
+        story.append(Paragraph(f"<b>Período:</b> {quant_trimestre}º Trimestre de {datetime.now().year}", normal_style))
+        story.append(Spacer(1, 30))
         
-        # Informações gerais
-        analises = charts_data['analises']
-        story.append(Paragraph("📊 <b>RESUMO EXECUTIVO</b>", subtitle_style))
-        story.append(Spacer(1, 12))
+        # Resumo executivo - simplificado
+        analises = charts_data.get('analises', {})
+        story.append(Paragraph("<b>RESUMO EXECUTIVO</b>", subtitle_style))
+        story.append(Spacer(1, 15))
         
-        # Verificar se é formato real ou antigo
+        # Verificar se é formato real ou antigo - simplificado
         if 'total_alunos_leitura' in analises:
-            # Formato real da prefeitura
+            # Formato real da prefeitura - simplificado
             resumo_text = f"""
-            <b>📈 DADOS DE LEITURA:</b><br/>
+            <b>DADOS DE LEITURA:</b><br/>
             • Total de Alunos: <b>{analises['total_alunos_leitura']}</b><br/>
-            • Total de Anos/Séries: <b>{analises['total_anos']}</b><br/>
-            • Percentual de Não Leitores: <b>{analises['media_leitura_nl']:.1f}%</b><br/>
-            • Percentual de Leitores com Fluência: <b>{analises['media_leitura_lcf']:.1f}%</b><br/><br/>
+            • Anos/Séries Avaliados: <b>{analises['total_anos']}</b><br/>
+            • Não Leitores: <b>{analises['media_leitura_nl']:.1f}%</b><br/>
+            • Leitores com Fluência: <b>{analises['media_leitura_lcf']:.1f}%</b><br/><br/>
             
-            <b>📝 DADOS DE ESCRITA:</b><br/>
+            <b>DADOS DE ESCRITA:</b><br/>
             • Total de Alunos: <b>{analises['total_alunos_escrita']}</b><br/>
-            • Percentual de Pré-Silábicos: <b>{analises['media_escrita_p']:.1f}%</b><br/>
-            • Percentual de Ortográficos: <b>{analises['media_escrita_o']:.1f}%</b><br/><br/>
-            
-            <b>🎯 LEGENDAS:</b><br/>
-            <b>Leitura:</b> NL=Não Leitor, LS=Leitor de Sílabas, LP=Leitor de Palavras, LF=Leitor de Frases, LSF=Leitor Sem Fluência, LCF=Leitor Com Fluência<br/>
-            <b>Escrita:</b> P=Pré-Silábico, S=Silábico, S.A.=Silábico Alfabético, A=Alfabético, O=Ortográfico
+            • Pré-Silábicos: <b>{analises['media_escrita_p']:.1f}%</b><br/>
+            • Ortográficos: <b>{analises['media_escrita_o']:.1f}%</b>
             """
         else:
-            # Formato antigo
+            # Formato antigo - simplificado
             resumo_text = f"""
-            <b>📈 DADOS GERAIS:</b><br/>
-            • Total de Alunos Analisados: <b>{analises['total_alunos']}</b><br/>
-            • Total de Escolas: <b>{analises['total_escolas']}</b><br/>
-            • Percentual de Alto Nível em Leitura: <b>{analises['media_leitura_alto']:.1f}%</b><br/>
-            • Percentual de Alto Nível em Escrita: <b>{analises['media_escrita_alto']:.1f}%</b><br/>
-            • Percentual de Baixo Nível em Leitura: <b>{analises['media_leitura_baixo']:.1f}%</b><br/>
-            • Percentual de Baixo Nível em Escrita: <b>{analises['media_escrita_baixo']:.1f}%</b>
+            <b>DADOS GERAIS:</b><br/>
+            • Total de Alunos: <b>{analises.get('total_alunos', 0)}</b><br/>
+            • Total de Escolas: <b>{analises.get('total_escolas', 0)}</b><br/>
+            • Alto Nível em Leitura: <b>{analises.get('media_leitura_alto', 0):.1f}%</b><br/>
+            • Alto Nível em Escrita: <b>{analises.get('media_escrita_alto', 0):.1f}%</b>
             """
         
         story.append(Paragraph(resumo_text, normal_style))
-        story.append(Spacer(1, 20))
+        story.append(Spacer(1, 30))
         
-        # Adicionar cada gráfico
+        # Adicionar cada gráfico com descrições detalhadas
+        chart_count = 0
         for chart_key, chart_info in charts_data.items():
             if chart_key == 'analises':
                 continue
                 
-            # Título do gráfico
-            story.append(Paragraph(f"📈 <b>{chart_info['title']}</b>", subtitle_style))
-            story.append(Spacer(1, 12))
+            chart_count += 1
+            print(f"🔍 DEBUG: Processando gráfico {chart_count}: {chart_key}")
             
-            # Descrição
+            # Título do gráfico - centralizado
+            story.append(Paragraph(f"<b>{chart_info['title']}</b>", subtitle_style))
+            story.append(Spacer(1, 15))
+            
+            # Descrição simplificada
             story.append(Paragraph(chart_info['description'], normal_style))
-            story.append(Spacer(1, 12))
+            story.append(Spacer(1, 15))
             
             # Adicionar imagem do gráfico
             if os.path.exists(chart_info['path']):
                 try:
                     from reportlab.platypus import Image
-                    img = Image(chart_info['path'], width=450, height=350)
+                    # Redimensionar imagem para caber na página - centralizada
+                    img = Image(chart_info['path'], width=480, height=360)
                     story.append(img)
                     story.append(Spacer(1, 12))
+                    
+                    # Adicionar legenda explicativa simplificada
+                    if 'leitura' in chart_key.lower():
+                        legend_text = """
+                        <b>Interpretação:</b> Distribuição dos níveis de leitura por ano/série, 
+                        mostrando a evolução do desenvolvimento da leitura.
+                        """
+                    elif 'escrita' in chart_key.lower():
+                        legend_text = """
+                        <b>Interpretação:</b> Distribuição dos níveis de escrita por ano/série, 
+                        mostrando a evolução do desenvolvimento da escrita.
+                        """
+                    elif 'comparacao' in chart_key.lower():
+                        legend_text = """
+                        <b>Interpretação:</b> Comparação direta entre leitura e escrita, 
+                        permitindo identificar correlações e áreas de atenção.
+                        """
+                    elif 'resumo' in chart_key.lower():
+                        legend_text = """
+                        <b>Interpretação:</b> Visão geral dos principais indicadores, 
+                        destacando pontos que necessitam de atenção pedagógica.
+                        """
+                    else:
+                        legend_text = """
+                        <b>Interpretação:</b> Dados consolidados do diagnóstico educacional 
+                        para o período analisado.
+                        """
+                    
+                    story.append(Paragraph(legend_text, legend_style))
+                    story.append(Spacer(1, 25))
+                    
                 except Exception as e:
-                    story.append(Paragraph(f"<i>Gráfico salvo em: {chart_info['path']}</i>", styles['Italic']))
-            
-            story.append(Spacer(1, 20))
+                    print(f"🔍 DEBUG: Erro ao adicionar imagem {chart_info['path']}: {e}")
+                    story.append(Paragraph(f"<i>Erro ao carregar gráfico: {chart_info['path']}</i>", styles['Italic']))
+                    story.append(Spacer(1, 20))
+            else:
+                print(f"🔍 DEBUG: Arquivo de gráfico não encontrado: {chart_info['path']}")
+                story.append(Paragraph(f"<i>Gráfico não disponível: {chart_info['path']}</i>", styles['Italic']))
+                story.append(Spacer(1, 20))
         
-        # Análise final
-        story.append(Paragraph("📋 <b>ANÁLISE E RECOMENDAÇÕES</b>", subtitle_style))
-        story.append(Spacer(1, 12))
+        # Análise e recomendações - simplificada
+        story.append(Paragraph("<b>ANÁLISE E RECOMENDAÇÕES</b>", subtitle_style))
+        story.append(Spacer(1, 15))
         
         if 'total_alunos_leitura' in analises:
-            # Formato real da prefeitura
+            # Formato real da prefeitura - simplificado
             analise_final = f"""
-            <b>✅ PONTOS POSITIVOS:</b><br/>
-            • {analises['total_anos']} anos/séries participaram do diagnóstico<br/>
-            • {analises['total_alunos_leitura']} alunos foram avaliados em leitura<br/>
-            • {analises['total_alunos_escrita']} alunos foram avaliados em escrita<br/>
-            • {analises['media_leitura_lcf']:.1f}% dos alunos apresentam leitura com fluência<br/>
-            • {analises['media_escrita_o']:.1f}% dos alunos apresentam escrita ortográfica<br/><br/>
+            <b>PONTOS POSITIVOS:</b><br/>
+            • {analises['total_anos']} anos/séries avaliados<br/>
+            • {analises['total_alunos_leitura']} alunos em leitura<br/>
+            • {analises['media_leitura_lcf']:.1f}% com leitura fluente<br/>
+            • {analises['media_escrita_o']:.1f}% com escrita ortográfica<br/><br/>
             
-            <b>⚠️ ÁREAS DE MELHORIA:</b><br/>
-            • {analises['media_leitura_nl']:.1f}% dos alunos precisam de apoio em leitura<br/>
-            • {analises['media_escrita_p']:.1f}% dos alunos precisam de apoio em escrita<br/><br/>
+            <b>ÁREAS DE MELHORIA:</b><br/>
+            • {analises['media_leitura_nl']:.1f}% precisam de apoio em leitura<br/>
+            • {analises['media_escrita_p']:.1f}% precisam de apoio em escrita<br/><br/>
             
-            <b>🎯 RECOMENDAÇÕES:</b><br/>
-            • Implementar programas de reforço para não leitores<br/>
-            • Desenvolver atividades específicas para cada nível<br/>
-            • Manter monitoramento contínuo dos progressos<br/>
-            • Criar estratégias personalizadas por ano/série<br/>
-            • Estabelecer metas progressivas para cada trimestre
+            <b>RECOMENDAÇÕES:</b><br/>
+            • Programas de reforço para não leitores<br/>
+            • Atividades específicas por nível<br/>
+            • Monitoramento contínuo<br/>
+            • Estratégias personalizadas por série
             """
         else:
-            # Formato antigo
+            # Formato antigo - simplificado
             analise_final = f"""
-            <b>✅ PONTOS POSITIVOS:</b><br/>
-            • {analises['total_escolas']} escolas participaram do diagnóstico<br/>
-            • {analises['total_alunos']} alunos foram avaliados<br/>
-            • {analises['media_leitura_alto']:.1f}% dos alunos apresentam alto nível de leitura<br/>
-            • {analises['media_escrita_alto']:.1f}% dos alunos apresentam alto nível de escrita<br/><br/>
+            <b>PONTOS POSITIVOS:</b><br/>
+            • {analises.get('total_escolas', 0)} escolas avaliadas<br/>
+            • {analises.get('total_alunos', 0)} alunos analisados<br/>
+            • {analises.get('media_leitura_alto', 0):.1f}% com alto nível de leitura<br/>
+            • {analises.get('media_escrita_alto', 0):.1f}% com alto nível de escrita<br/><br/>
             
-            <b>⚠️ ÁREAS DE MELHORIA:</b><br/>
-            • {analises['media_leitura_baixo']:.1f}% dos alunos precisam de apoio em leitura<br/>
-            • {analises['media_escrita_baixo']:.1f}% dos alunos precisam de apoio em escrita<br/><br/>
+            <b>ÁREAS DE MELHORIA:</b><br/>
+            • {analises.get('media_leitura_baixo', 0):.1f}% precisam de apoio em leitura<br/>
+            • {analises.get('media_escrita_baixo', 0):.1f}% precisam de apoio em escrita<br/><br/>
             
-            <b>🎯 RECOMENDAÇÕES:</b><br/>
-            • Implementar programas de reforço para alunos com baixo nível<br/>
-            • Desenvolver atividades específicas para cada modalidade<br/>
-            • Manter monitoramento contínuo dos progressos
+            <b>RECOMENDAÇÕES:</b><br/>
+            • Programas de reforço<br/>
+            • Atividades específicas por modalidade<br/>
+            • Monitoramento contínuo<br/>
+            • Grupos de estudo diferenciados
             """
         
         story.append(Paragraph(analise_final, normal_style))
-        story.append(Spacer(1, 20))
+        story.append(Spacer(1, 25))
         
-        # Rodapé
+        # Metodologia - simplificada
+        story.append(Paragraph("<b>METODOLOGIA</b>", subtitle_style))
+        story.append(Spacer(1, 15))
+        
+        metodologia_text = f"""
+        <b>Instrumentos:</b> Diagnóstico de Leitura e Escrita<br/>
+        <b>Análise:</b> Classificação por níveis de desenvolvimento<br/>
+        <b>Período:</b> {quant_trimestre}º Trimestre de {datetime.now().year}<br/>
+        <b>Sistema:</b> EduGraf - Diagnóstico Educacional
+        """
+        
+        story.append(Paragraph(metodologia_text, normal_style))
+        story.append(Spacer(1, 30))
+        
+        # Rodapé simplificado
         footer_style = ParagraphStyle(
             'Footer',
             parent=styles['Normal'],
-            fontSize=9,
+            fontSize=10,
             alignment=1,
-            textColor=colors.HexColor('#666666')
+            textColor=colors.HexColor('#666666'),
+            fontName='Helvetica-Oblique'
         )
-        story.append(Paragraph("--- Relatório gerado automaticamente pelo Sistema EduGraf ---", footer_style))
+        
+        story.append(Paragraph("─" * 60, footer_style))
+        story.append(Paragraph("Sistema EduGraf - Diagnóstico Educacional", footer_style))
+        story.append(Paragraph(f"Gerado em {datetime.now().strftime('%d/%m/%Y às %H:%M')}", footer_style))
+        
+        print(f"🔍 DEBUG: Construindo PDF...")
         
         # Gerar PDF
         doc.build(story)
         
-        return pdf_path
+        print(f"🔍 DEBUG: PDF gerado com sucesso: {pdf_path}")
+        
+        # Verificar se o arquivo foi criado
+        if os.path.exists(pdf_path):
+            file_size = os.path.getsize(pdf_path)
+            print(f"🔍 DEBUG: Tamanho do arquivo PDF: {file_size} bytes")
+            return pdf_path
+        else:
+            raise Exception("PDF não foi criado corretamente")
         
     except Exception as e:
+        print(f"🔍 DEBUG: Erro na criação do PDF: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise Exception(f"Erro na criação do PDF: {str(e)}")
 
 def consolidate_data(dataframes: List[pd.DataFrame]) -> pd.DataFrame:

@@ -4,6 +4,7 @@ import Select from "../../components/Select/Select";
 import SmallButton from "../../components/SmallButton/SmallButton";
 import FileUpload from "../../components/FileUpload/FileUpload";
 import Tips from "../../components/Tips/Tips";
+import { useNotificationContext } from "../../contexts/NotificationContext";
 import { useState } from "react";
 import axios from "axios";
 import Grafico from "../../assets/grafico-exemplo.png";
@@ -12,43 +13,34 @@ const GraficoPage = () => {
   // 1. Estado para guardar o valor do polo selecionado.
   //    Inicializamos com 'Polo 1' como padrão.
   const [selectedAmount, setSelectedAmount] = useState(1);
-  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const { showSuccess, showError } = useNotificationContext();
   // 2. Estado para guardar o arquivo selecionado (vindo do componente FileUpload).
 
   const handleAmountChange = (e) => {
     const amount = parseInt(e.target.value, 10);
     setSelectedAmount(amount);
-    setSelectedFiles([]);
-  };
-
-  const handleFileUpdate = (index, file) => {
-    const newFiles = [...selectedFiles];
-    newFiles[index] = file;
-    setSelectedFiles(newFiles);
+    setSelectedFile(null);
   };
 
   // Manipulador para o envio do formulário
   const handleUpload = async () => {
-    // Verifica se o número de arquivos selecionados corresponde ao esperado
-    if (
-      selectedFiles.length !== parseInt(selectedAmount) ||
-      selectedFiles.includes(undefined)
-    ) {
-      alert("Por favor, selecione todos os arquivos necessários.");
+    if (!selectedFile) {
+      showError(
+        "Arquivo não selecionado",
+        "Por favor, selecione um arquivo Excel (.xlsx) antes de continuar."
+      );
       return;
     }
 
     const formData = new FormData();
     formData.append("quant_trimestre", selectedAmount.toString());
-
-    // Adicionar apenas o primeiro arquivo (para compatibilidade com o backend atual)
-    if (selectedFiles[0]) {
-      formData.append("file", selectedFiles[0]);
-    }
+    formData.append("file", selectedFile);
+    formData.append("tipo_processamento", "grafico");  // Forçar processamento como gráfico
 
     console.log("🔍 DEBUG: Enviando para o backend:", {
       quant_trimestre: selectedAmount,
-      file: selectedFiles[0]?.name,
+      file: selectedFile.name,
     });
 
     // Debug: verificar se quant_trimestre é um número
@@ -116,8 +108,9 @@ const GraficoPage = () => {
       window.URL.revokeObjectURL(url);
 
       // Mensagem de sucesso
-      alert(
-        "Relatório de gráficos gerado com sucesso! O PDF será baixado automaticamente."
+      showSuccess(
+        "📈 Relatório de Gráficos Gerado!",
+        `O relatório do ${selectedAmount}º trimestre foi processado com sucesso! O PDF com gráficos e análises detalhadas será baixado automaticamente.`
       );
     } catch (error) {
       console.error("Erro ao fazer upload:", error);
@@ -136,7 +129,10 @@ const GraficoPage = () => {
         }
       }
 
-      alert(errorMessage);
+      showError(
+        "❌ Erro ao Gerar Relatório",
+        errorMessage
+      );
     }
   };
 
@@ -148,17 +144,15 @@ const GraficoPage = () => {
       <main className="tabelas_container">
         <h2>Gerar gráficos do Polo</h2>
         <div className="select_container--polo">
-          <p>Selecione as tabelas do polo:</p>
+          <p>Qual trimestre você deseja?</p>
+          <Select
+            type={"trimestre"}
+            value={selectedAmount}
+            onChange={handleAmountChange}
+          />
+          <p>Selecione a planilha do trimestre:</p>
           <div className="select_container--upload">
-            {/* <FileUpload onFileSelect={setSelectedFiles} /> */}
-            {Array.from({ length: selectedAmount }, (_, index) => (
-              <div key={index} className="fileupload-wrapper">
-                <p>Tabela do {index + 1}º trimestre: </p>
-                <FileUpload
-                  onFileSelect={(file) => handleFileUpdate(index, file)}
-                />
-              </div>
-            ))}
+            <FileUpload onFileSelect={setSelectedFile} />
             <SmallButton
               className="upload_button"
               description={"Gerar gráfico"}
@@ -169,7 +163,6 @@ const GraficoPage = () => {
         </div>
 
         <img src={Grafico} alt="Pré visualização da tabela" />
-        <SmallButton description={"Salvar gráficos"} filled={false} />
       </main>
       <footer>
         <Tips pagina={3} />

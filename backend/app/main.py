@@ -48,6 +48,7 @@ async def upload_excel(
     file: Optional[UploadFile] = File(None),
     polo: Optional[str] = Form(None),
     trimestre: Optional[int] = Form(None),
+    quant_trimestre: Optional[int] = Form(None),  # Compatibilidade com frontend
     tipo_processamento: Optional[str] = Form("tabela")  # "tabela" ou "grafico"
 ):
     """
@@ -84,16 +85,19 @@ async def upload_excel(
     
     try:
         # Determinar tipo de processamento
-        if tipo_processamento == "grafico" or trimestre is not None:
+        # Usar quant_trimestre se disponível, senão usar trimestre
+        trimestre_final = quant_trimestre if quant_trimestre is not None else trimestre
+        
+        if tipo_processamento == "grafico" or trimestre_final is not None:
             # Processamento para gráficos
-            if trimestre is None:
+            if trimestre_final is None:
                 raise HTTPException(status_code=422, detail="Trimestre é obrigatório para gráficos")
             
-            result_file = await op.gerar_graficos(upload_files, trimestre)
+            result_file = await op.gerar_graficos(upload_files, trimestre_final)
             
             return FileResponse(
                 path=result_file,
-                filename=f"relatorio_graficos_{trimestre}T_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                filename=f"relatorio_graficos_{trimestre_final}T_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
                 media_type="application/pdf"
             )
             
