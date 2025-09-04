@@ -3,14 +3,19 @@ from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
 import os
+import asyncio
 from datetime import datetime
-from app.operations import operations as op
+from app.operations import Operations
+from app.auth import router as auth_router
+from app.database import init_db
 
 app = FastAPI(
     title="EduGraf API Simplificada",
     description="API simplificada para processamento de planilhas educacionais",
     version="2.0.0"
 )
+# Rotas de autenticação (JWT)
+app.include_router(auth_router)
 
 # CORS mais permissivo para desenvolvimento
 app.add_middleware(
@@ -24,6 +29,15 @@ app.add_middleware(
 # Criar diretórios necessários
 os.makedirs("temp", exist_ok=True)
 os.makedirs("uploads", exist_ok=True)
+
+# Instanciar a classe de operações
+op = Operations()
+
+# Inicializar banco de dados na startup
+@app.on_event("startup")
+async def startup_event():
+    """Inicializa o banco de dados quando a aplicação inicia"""
+    await init_db()
 
 @app.get("/", response_class=HTMLResponse)
 async def root():

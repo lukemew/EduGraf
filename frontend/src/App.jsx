@@ -1,10 +1,18 @@
+import { Navigate, Route, Routes } from "react-router-dom";
 import "./App.css";
+import NotificationContainer from "./components/NotificationContainer/NotificationContainer";
+import { AuthProvider, useAuth } from "./contexts/AuthContext.jsx";
+import { NotificationProvider, useNotificationContext } from "./contexts/NotificationContext";
+import Login from "./pages/Auth/Login.jsx";
+import Register from "./pages/Auth/Register.jsx";
 import GraficoPage from "./pages/GraficoPage/GraficoPage";
 import HomePage from "./pages/HomePage/HomePage";
 import TabelasPage from "./pages/TabelasPage/TabelasPage";
-import NotificationContainer from "./components/NotificationContainer/NotificationContainer";
-import { NotificationProvider, useNotificationContext } from "./contexts/NotificationContext";
-import { Routes, Route } from "react-router-dom";
+
+function PrivateRoute({ children }) {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
+}
 
 function AppContent() {
   const { notifications, removeNotification } = useNotificationContext();
@@ -12,9 +20,11 @@ function AppContent() {
   return (
     <div>
       <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/TabelasPage" element={<TabelasPage />} />
-        <Route path="/GraficoPage" element={<GraficoPage />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/" element={<PrivateRoute><HomePage /></PrivateRoute>} />
+        <Route path="/TabelasPage" element={<PrivateRoute><TabelasPage /></PrivateRoute>} />
+        <Route path="/GraficoPage" element={<PrivateRoute><GraficoPage /></PrivateRoute>} />
       </Routes>
       <NotificationContainer
         notifications={notifications}
@@ -27,7 +37,9 @@ function AppContent() {
 function App() {
   return (
     <NotificationProvider>
-      <AppContent />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </NotificationProvider>
   );
 }

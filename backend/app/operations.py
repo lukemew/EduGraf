@@ -339,5 +339,4 @@ class Operations:
         
         return output_file
 
-# Instância global para uso
-operations = Operations()
+# A classe Operations está pronta para ser instanciada

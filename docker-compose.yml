@@ -1,25 +1,69 @@
 services:
-  # Serviço do Backend (API)
-  backend:
-    build:
-      context: ./backend/ # Caminho para o Dockerfile do backend
-    container_name: edugraf-backend
-    ports:
-      - "5000:5000" # Mapeia a porta 5000 do host para a 5000 do container
-    volumes:
-      - ./backend:/app # Mapeia a pasta backend para /app dentro do container para desenvolvimento (opcional)
+  # Banco de Dados PostgreSQL
+  postgres:
+    image: postgres:15
+    container_name: edugraf-postgres
     restart: unless-stopped
     environment:
-      # Aqui você pode definir variáveis de ambiente se necessário
-      - FLASK_ENV=production
+      - POSTGRES_DB=edugraf
+      - POSTGRES_USER=edugraf
+      - POSTGRES_PASSWORD=edugraf
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - edugraf-network
 
-  # Serviço do Frontend (React App)
+  # Serviço do Backend (FastAPI)
+  backend:
+    build:
+      context: ./backend/
+      dockerfile: Dockerfile
+    container_name: edugraf-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/uploads:/app/uploads
+      - ./backend/temp:/app/temp
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://edugraf:edugraf@postgres:5432/edugraf
+      - JWT_SECRET=b5a81466066ef1a14e208d750ab0cb1dd19cf30d7a6edffc03d251ca5b677131
+      - JWT_ALGORITHM=HS256
+      - JWT_EXPIRES_MINUTES=60
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - DEBUG=True
+      - ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://frontend:5173
+    depends_on:
+      - postgres
+    networks:
+      - edugraf-network
+
+  # Serviço do Frontend (Vite)
   frontend:
     build:
-      context: ./frontend/ # Caminho para o Dockerfile do frontend
+      context: ./frontend/
+      dockerfile: Dockerfile
     container_name: edugraf-frontend
     ports:
-      - "80:80" # Mapeia a porta 80 do host para a 80 do container
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     restart: unless-stopped
+    environment:
+      - VITE_API_URL=http://localhost:8000
     depends_on:
-      - backend # Garante que o backend inicie antes do frontend (bom para dependências)
+      - backend
+    networks:
+      - edugraf-network
+
+volumes:
+  pgdata:
+
+
+networks:
+  edugraf-network:
+    driver: bridge

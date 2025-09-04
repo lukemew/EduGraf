@@ -1,0 +1,275 @@
+/* Reset e base */
+.auth_page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: linear-gradient(135deg, #165b70 0%, #3d626d 50%, #1abc9c 100%);
+}
+
+/* Background pattern */
+.auth_background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+}
+
+.auth_pattern {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+}
+
+/* Conteúdo principal */
+.auth_content {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 500px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+}
+
+/* Header com logo */
+.auth_header {
+  text-align: center;
+  color: white;
+}
+
+.auth_logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.logo_icon {
+  font-size: 3rem;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+}
+
+.auth_logo h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.auth_tagline {
+  font-size: 1.1rem;
+  opacity: 0.9;
+  margin: 0;
+  font-weight: 300;
+}
+
+/* Card de autenticação */
+.auth_card {
+  background: white;
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 400px;
+}
+
+
+.auth_card_header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.auth_card_header h2 {
+  color: #165b70;
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+}
+
+.auth_card_header p {
+  color: #3d626d;
+  font-size: 0.95rem;
+  margin: 0;
+  opacity: 0.8;
+}
+
+/* Formulário */
+.auth_form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.form_group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form_group label {
+  color: #165b70;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+
+.input_container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input_icon {
+  position: absolute;
+  left: 16px;
+  font-size: 1.1rem;
+  color: #1abc9c;
+  z-index: 1;
+}
+
+.input_container input {
+  width: 100%;
+  padding: 12px 12px 12px 40px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  background: white;
+  outline: none;
+}
+
+.input_container input:focus {
+  border-color: #1abc9c;
+  box-shadow: 0 0 0 2px rgba(26, 188, 156, 0.2);
+}
+
+.input_container input::placeholder {
+  color: #a0aec0;
+  font-weight: 400;
+}
+
+/* Botão de autenticação */
+.auth_button {
+  background: #1abc9c;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.auth_button:hover:not(:disabled) {
+  background: #16a085;
+}
+
+.auth_button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.auth_button.loading {
+  background: #95a5a6;
+}
+
+/* Spinner de loading */
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Footer do card */
+.auth_footer {
+  text-align: center;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #e1e8ed;
+}
+
+.auth_footer p {
+  color: #3d626d;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.auth_link {
+  color: #1abc9c;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.auth_link:hover {
+  color: #16a085;
+  text-decoration: underline;
+}
+
+/* Features */
+.auth_features {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.feature_item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+.feature_icon {
+  font-size: 1rem;
+}
+
+/* Responsividade */
+@media (max-width: 480px) {
+  .auth_card {
+    padding: 24px 20px;
+  }
+  
+  .auth_logo h1 {
+    font-size: 2rem;
+  }
+  
+  .logo_icon {
+    font-size: 2.5rem;
+  }
+}
+
+

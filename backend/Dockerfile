@@ -1,23 +1,26 @@
-# Use uma imagem oficial do Python como base
-FROM python:3.10-slim
+FROM python:3.11-slim
 
-# Define o diretório de trabalho dentro do container
 WORKDIR /app
 
-# Adiciona o diretório de trabalho ao PYTHONPATH para resolver imports
-ENV PYTHONPATH=/app
+# Instalar dependências do sistema
+RUN apt-get update && apt-get install -y \
+  gcc \
+  g++ \
+  libpq-dev \
+  && rm -rf /var/lib/apt/lists/*
 
-# Copia o arquivo de dependências para o diretório de trabalho
+# Copiar requirements e instalar dependências Python
 COPY requirements.txt .
-
-# Instala as dependências
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copia o restante dos arquivos da aplicação para o diretório de trabalho
+# Copiar código da aplicação
 COPY . .
 
-# Expõe a porta que a aplicação backend vai rodar
-EXPOSE 5000
+# Criar diretórios necessários
+RUN mkdir -p uploads temp
+
+# Expor porta
+EXPOSE 8000
 
 # Comando para iniciar a aplicação
-CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:5000", "app.main:app"]
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
