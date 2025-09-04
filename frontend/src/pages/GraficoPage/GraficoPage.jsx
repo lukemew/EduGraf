@@ -36,7 +36,7 @@ const GraficoPage = () => {
     const formData = new FormData();
     formData.append("quant_trimestre", selectedAmount.toString());
     formData.append("file", selectedFile);
-    formData.append("tipo_processamento", "grafico");  // Forçar processamento como gráfico
+    formData.append("tipo_processamento", "grafico"); // Forçar processamento como gráfico
 
     console.log("🔍 DEBUG: Enviando para o backend:", {
       quant_trimestre: selectedAmount,
@@ -129,10 +129,7 @@ const GraficoPage = () => {
         }
       }
 
-      showError(
-        "❌ Erro ao Gerar Relatório",
-        errorMessage
-      );
+      showError("❌ Erro ao Gerar Relatório", errorMessage);
     }
   };
 
@@ -142,20 +139,22 @@ const GraficoPage = () => {
         <Navbar />
       </header>
       <main className="tabelas_container">
-        <h2>Gerar gráficos do Polo</h2>
+        <h2>Gerar gráfico do Polo</h2>
         <div className="select_container--polo">
-          <p>Qual trimestre você deseja?</p>
-          <Select
-            type={"trimestre"}
-            value={selectedAmount}
-            onChange={handleAmountChange}
-          />
-          <p>Selecione a planilha do trimestre:</p>
+          <p>Selecione a quantidade de Períodos:</p>
+          <Select value={selectedAmount} onChange={handleAmountChange} />
+          <p>Selecione a(s) tabela(s) do polo:</p>
           <div className="select_container--upload">
-            <FileUpload onFileSelect={setSelectedFile} />
+            {/* <FileUpload onFileSelect={setSelectedFiles} /> */}
+            {Array.from({ length: selectedAmount }, (_, index) => (
+              <div key={index} className="fileupload-wrapper">
+                <p>Tabela do {index + 1}º período: </p>
+                <FileUpload onFileSelect={setSelectedFile} />
+              </div>
+            ))}
             <SmallButton
               className="upload_button"
-              description={"Gerar gráfico"}
+              description={"Gerar tabela"}
               filled={true}
               onClick={handleUpload}
             />
@@ -163,6 +162,7 @@ const GraficoPage = () => {
         </div>
 
         <img src={Grafico} alt="Pré visualização da tabela" />
+        <SmallButton description={"Salvar gráficos"} filled={false} />
       </main>
       <footer>
         <Tips pagina={3} />
