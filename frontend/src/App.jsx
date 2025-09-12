@@ -6,7 +6,6 @@ import { NotificationProvider, useNotificationContext } from "./contexts/Notific
 import Login from "./pages/Auth/Login.jsx";
 import Register from "./pages/Auth/Register.jsx";
 import GraficoPage from "./pages/GraficoPage/GraficoPage";
-import HomePage from "./pages/HomePage/HomePage";
 import TabelasPage from "./pages/TabelasPage/TabelasPage";
 
 function PrivateRoute({ children }) {
@@ -22,7 +21,7 @@ function AppContent() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/" element={<PrivateRoute><HomePage /></PrivateRoute>} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/TabelasPage" element={<PrivateRoute><TabelasPage /></PrivateRoute>} />
         <Route path="/GraficoPage" element={<PrivateRoute><GraficoPage /></PrivateRoute>} />
       </Routes>
