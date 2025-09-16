@@ -143,11 +143,12 @@
 
 .input_container input {
   width: 100%;
-  padding: 12px 12px 12px 40px;
+  padding: 12px 44px 12px 40px; /* espaço à direita para o botão olho */
   border: 1px solid #ddd;
   border-radius: 8px;
   font-size: 1rem;
-  background: white;
+  background: transparent; /* sem fundo */
+  color: #111; /* texto preto */
   outline: none;
 }
 
@@ -159,6 +160,34 @@
 .input_container input::placeholder {
   color: #a0aec0;
   font-weight: 400;
+}
+
+/* Mensagem de erro inline nos cards */
+.form_error {
+  margin-top: 8px;
+  color: #dc2626; /* vermelho profissional */
+  background: rgba(220, 38, 38, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.25);
+  border-radius: 8px;
+  padding: 10px 12px;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+/* Botão olho dentro do input */
+.toggle_password {
+  position: absolute;
+  right: 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #3d626d;
+  padding: 4px;
+}
+
+.toggle_password:hover {
+  color: #165b70;
 }
 
 /* Botão de autenticação */

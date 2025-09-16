@@ -31,3 +31,26 @@
 .navbar a:hover {
   color: #1abc9c;
 }
+
+/* Container dos links + ação à direita */
+.nav_links {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.logout_button {
+  background: transparent;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.logout_button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: #ffffff;
+}

@@ -1,20 +1,26 @@
 import React from "react";
-import "./Navbar.css";
+import { Link, useNavigate } from "react-router-dom";
 import Logo from "../../assets/logo.png";
-import { Link } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext.jsx";
+import "./Navbar.css";
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const { logout, isAuthenticated, user } = useAuth();
 
   const handleLogoClick = () => {
     navigate("../");
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate("/login", { replace: true });
+  };
+
   return (
     <nav className="navbar">
       <img onClick={handleLogoClick} src={Logo} alt="Logo do Edugraf" />
-      <div>
+      <div className="nav_links">
         <ul>
           <li>
             <Link to="/">Início</Link>
@@ -29,6 +35,11 @@ const Navbar = () => {
             <Link to="/GraficoPage">Gráficos</Link>
           </li>
         </ul>
+        {isAuthenticated ? (
+          <button className="logout_button" onClick={handleLogout} aria-label="Sair">
+            Sair
+          </button>
+        ) : null}
       </div>
     </nav>
   );

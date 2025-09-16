@@ -84,12 +84,27 @@ async def register(
 
 @router.post("/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
+    # Validação básica de campos obrigatórios
+    if not form_data.username or not form_data.password:
+        raise HTTPException(status_code=422, detail="E-mail e senha são obrigatórios")
+
+    # Buscar usuário pelo e-mail
     result = await db.execute(select(User).where(User.email == form_data.username))
     user = result.scalar_one_or_none()
-    if user is None or not verify_password(form_data.password, user.password_hash):
-        raise HTTPException(status_code=400, detail="Credenciais inválidas")
+
+    if user is None:
+        # Usuário não encontrado
+        raise HTTPException(status_code=400, detail="Conta não existe")
+
+    if not verify_password(form_data.password, user.password_hash):
+        # Senha incorreta
+        raise HTTPException(status_code=400, detail="Senha incorreta")
 
     access_token = create_access_token(subject=user.email)
-    return {"access_token": access_token, "token_type": "bearer", "user": {"id": user.id, "name": user.name, "email": user.email}}
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {"id": user.id, "name": user.name, "email": user.email},
+    }
 
 

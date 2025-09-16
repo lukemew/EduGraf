@@ -21,7 +21,14 @@ function AppContent() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route
+          path="/"
+          element={
+            <PrivateRoute>
+              <Navigate to="/GraficoPage" replace />
+            </PrivateRoute>
+          }
+        />
         <Route path="/TabelasPage" element={<PrivateRoute><TabelasPage /></PrivateRoute>} />
         <Route path="/GraficoPage" element={<PrivateRoute><GraficoPage /></PrivateRoute>} />
       </Routes>
