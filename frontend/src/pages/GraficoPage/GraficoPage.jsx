@@ -154,7 +154,7 @@ const GraficoPage = () => {
             ))}
             <SmallButton
               className="upload_button"
-              description={"Gerar tabela"}
+              description={"Gerar gráfico"}
               filled={true}
               onClick={handleUpload}
             />
@@ -162,7 +162,6 @@ const GraficoPage = () => {
         </div>
 
         <img src={Grafico} alt="Pré visualização da tabela" />
-        <SmallButton description={"Salvar gráficos"} filled={false} />
       </main>
       <footer>
         <Tips pagina={3} />
