@@ -6,8 +6,8 @@
   justify-content: center;
   position: relative;
   overflow: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: linear-gradient(135deg, #165b70 0%, #3d626d 50%, #1abc9c 100%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: linear-gradient(135deg, #165b70);
 }
 
 /* Background pattern */
@@ -26,9 +26,16 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-image: 
-    radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+  background-image: radial-gradient(
+      circle at 25% 25%,
+      rgba(255, 255, 255, 0.1) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 75% 75%,
+      rgba(255, 255, 255, 0.05) 0%,
+      transparent 50%
+    );
 }
 
 /* Conteúdo principal */
@@ -87,7 +94,6 @@
   max-width: 400px;
 }
 
-
 .auth_card_header {
   text-align: center;
   margin-bottom: 32px;
@@ -143,7 +149,7 @@
 
 .input_container input {
   width: 100%;
-  padding: 12px 44px 12px 40px; /* espaço à direita para o botão olho */
+  padding: 12px 44px 12px 12px; /* espaço à direita para o botão olho */
   border: 1px solid #ddd;
   border-radius: 8px;
   font-size: 1rem;
@@ -232,8 +238,12 @@
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Footer do card */
@@ -291,14 +301,12 @@
   .auth_card {
     padding: 24px 20px;
   }
-  
+
   .auth_logo h1 {
     font-size: 2rem;
   }
-  
+
   .logo_icon {
     font-size: 2.5rem;
   }
 }
-
-
