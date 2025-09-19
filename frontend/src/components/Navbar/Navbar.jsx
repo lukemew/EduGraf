@@ -17,6 +17,10 @@ const Navbar = () => {
     navigate("/login", { replace: true });
   };
 
+  const handleNewUser = () => {
+    navigate("/register");
+  };
+
   return (
     <nav className="navbar">
       <img onClick={handleLogoClick} src={Logo} alt="Logo do Edugraf" />
@@ -36,9 +40,14 @@ const Navbar = () => {
           </li>
         </ul>
         {isAuthenticated ? (
-          <button className="logout_button" onClick={handleLogout} aria-label="Sair">
-            Sair
-          </button>
+          <>
+            <button className="logout_button" onClick={handleNewUser} aria-label="Cadastrar novo usuário">
+              Novo Usuário
+            </button>
+            <button className="logout_button" onClick={handleLogout} aria-label="Sair">
+              Sair
+            </button>
+          </>
         ) : null}
       </div>
     </nav>
