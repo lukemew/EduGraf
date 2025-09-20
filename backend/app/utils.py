@@ -142,7 +142,7 @@ def aplicar_formatacao_excel(worksheet, df, titulo, cor_cabecalho='1abc9c', tipo
                 # Formatar números
                 if isinstance(cell.value, (int, float)):
                     if cell.value < 1:  # Percentuais
-                        cell.number_format = '0.0%'
+                        cell.number_format = '0'
                     else:  # Números inteiros
                         cell.number_format = '#,##0'
     
@@ -368,8 +368,14 @@ def process_excel_file_real(df: pd.DataFrame, polo: str) -> Dict[str, Any]:
             if pd.notna(row.iloc[0]) and str(row.iloc[0]).strip() != '':
                 # Verificar se parece ser uma linha de dados (tem números ou anos)
                 primeiro_valor = str(row.iloc[0]).strip()
-                # Corrigido: usar ° em vez de º e incluir anos 1° ao 9° e EJA
-                if any(ano in primeiro_valor.upper() for ano in ["ANO", "SÉRIE", "1°", "2°", "3°", "4°", "5°", "6°", "7°", "8°", "9°", "EJA"]) or primeiro_valor.isdigit():
+                pv_upper = primeiro_valor.upper()
+
+                # A nova lógica é: a linha é válida se começar com 'EJA', ou se o primeiro caractere for um número,
+                # ou se for a palavra exata 'ANO' ou 'SÉRIE' (para pegar o cabeçalho).
+                if (pv_upper.startswith('EJA') or
+                    (len(primeiro_valor) > 0 and primeiro_valor[0].isdigit()) or
+                    pv_upper == 'ANO' or
+                    pv_upper == 'SÉRIE'):
                     df_leitura_raw.append(row.tolist())
                     print(f"🔍 DEBUG: Linha de leitura válida {idx}: {primeiro_valor}")
         
@@ -432,8 +438,15 @@ def process_excel_file_real(df: pd.DataFrame, polo: str) -> Dict[str, Any]:
             # Verificar se a linha tem dados válidos
             if pd.notna(row.iloc[0]) and str(row.iloc[0]).strip() != '':
                 primeiro_valor = str(row.iloc[0]).strip()
-                # Corrigido: usar ° em vez de º e incluir anos 1° ao 9° e EJA
-                if any(ano in primeiro_valor.upper() for ano in ["ANO", "SÉRIE", "1°", "2°", "3°", "4°", "5°", "6°", "7°", "8°", "9°", "EJA"]) or primeiro_valor.isdigit():
+                pv_upper = primeiro_valor.upper()
+
+                # A nova lógica é: a linha é válida se começar com 'EJA', ou se o primeiro caractere for um número,
+                # ou se for a palavra exata 'ANO' ou 'SÉRIE' (para pegar o cabeçalho).
+                if (pv_upper.startswith('EJA') or
+                    (len(primeiro_valor) > 0 and primeiro_valor[0].isdigit()) or
+                    pv_upper == 'ANO' or
+                    pv_upper == 'SÉRIE'):
+
                     df_escrita_raw.append(row.tolist())
                     print(f"🔍 DEBUG: Linha de escrita válida {idx}: {primeiro_valor}")
         

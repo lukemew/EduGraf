@@ -238,17 +238,25 @@ class Operations:
         
         # Aba de Leitura
         ws_leitura = wb.create_sheet("Dados de Leitura")
-        for r in dataframe_to_rows(processed_data['leitura'], index=False, header=True):
-            ws_leitura.append(r)
+        # INSERE OS DADOS A PARTIR DA LINHA 3
+        rows_leitura = dataframe_to_rows(processed_data['leitura'], index=False, header=False)
+        for r_idx, row in enumerate(rows_leitura, 3):  # O '3' aqui faz começar da linha 3
+            for c_idx, value in enumerate(row, 1):
+                ws_leitura.cell(row=r_idx, column=c_idx, value=value)
+        # AGORA CHAMA A FORMATAÇÃO
         aplicar_formatacao_excel(ws_leitura, processed_data['leitura'], 
-                               f"📊 DADOS DE LEITURA - {polo.upper()}", '1abc9c', 'leitura')
-        
+                                f"📊 DADOS DE LEITURA - {polo.upper()}", '1abc9c', 'leitura')
+
         # Aba de Escrita
         ws_escrita = wb.create_sheet("Dados de Escrita")
-        for r in dataframe_to_rows(processed_data['escrita'], index=False, header=True):
-            ws_escrita.append(r)
+        # INSERE OS DADOS A PARTIR DA LINHA 3
+        rows_escrita = dataframe_to_rows(processed_data['escrita'], index=False, header=False)
+        for r_idx, row in enumerate(rows_escrita, 3): # O '3' aqui faz começar da linha 3
+            for c_idx, value in enumerate(row, 1):
+                ws_escrita.cell(row=r_idx, column=c_idx, value=value)
+        # AGORA CHAMA A FORMATAÇÃO
         aplicar_formatacao_excel(ws_escrita, processed_data['escrita'], 
-                               f"✍️ DADOS DE ESCRITA - {polo.upper()}", '3498db', 'escrita')
+                                f"✍️ DADOS DE ESCRITA - {polo.upper()}", '3498db', 'escrita')
         
         # Aba de Estatísticas
         stats_data = {
