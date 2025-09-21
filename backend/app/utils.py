@@ -125,54 +125,56 @@ def aplicar_formatacao_excel(worksheet, df, titulo, cor_cabecalho='1abc9c', tipo
     
     # Aplicar formatação aos dados
     for row_num in range(3, len(df) + 3):
-        for col_num in range(1, len(df.columns) + 1):
-            cell = worksheet.cell(row=row_num, column=col_num)
-            cell.font = fonte_normal
-            cell.border = borda_fina
+    # Pega o valor da primeira célula (Métrica) para checar se é um título de seção
+        metrica_value = str(worksheet.cell(row=row_num, column=1).value or '')
+
+        # --- SE FOR UM TÍTULO DE SEÇÃO ---
+        if "---" in metrica_value:
+            # Mescla as células da linha para o título ocupar o espaço da tabela
+            worksheet.merge_cells(f'A{row_num}:{ultima_coluna}{row_num}')
             
-            # Alternar cores das linhas
-            if row_num % 2 == 0:
-                cell.fill = preenchimento_linha_par
+            cell_titulo_secao = worksheet.cell(row=row_num, column=1)
+            # Limpa o texto, removendo os '---' para um visual mais limpo
+            cell_titulo_secao.value = metrica_value.replace("---", "").strip()
+            cell_titulo_secao.font = fonte_cabecalho # Fonte em negrito e branca
+            cell_titulo_secao.fill = preenchimento_titulo # Fundo escuro (mesma cor do título principal)
+            cell_titulo_secao.alignment = alinhamento_centro
+            cell_titulo_secao.border = borda_fina
             
-                 # Alinhamento baseado no tipo de dados
-            if col_num == 1:  # Primeira coluna (Métrica)
-                cell.alignment = alinhamento_esquerda
-            else:  # Segunda coluna (Valor)
-                cell.alignment = alinhamento_centro 
+            # Garante que todas as células na área mesclada tenham a borda
+            for col_idx in range(2, num_colunas + 1):
+                worksheet.cell(row=row_num, column=col_idx).border = borda_fina
+
+        # --- SE FOR UMA LINHA DE DADOS NORMAL ---
+        else:
+            for col_num in range(1, len(df.columns) + 1):
+                cell = worksheet.cell(row=row_num, column=col_num)
+                # Aplica formatação padrão (que já existia)
+                cell.font = fonte_normal
+                cell.border = borda_fina
+                if row_num % 2 == 1: # Usar ímpar para a cor não coincidir com a seção
+                    cell.fill = preenchimento_linha_par
                 
-                # --- LÓGICA ESPECIAL PARA A ABA DE ESTATÍSTICAS ---
-                if "RESUMO ESTATÍSTICO" in titulo.upper():
-                    # Pega o nome da métrica na primeira coluna da mesma linha
-                    celula_metrica = worksheet.cell(row=row_num, column=1).value
-                    
-                    # Se a métrica for "Total Alunos", adiciona o (100%)
-                    if "TOTAL ALUNOS" in str(celula_metrica).upper():
-                        valor_numerico = cell.value
-                        cell.value = f"{valor_numerico} (100%)"
-                        cell.number_format = '@'  # Força a célula a ser tratada como texto
-                    else:
-                        # Para as outras linhas (que já são %), mantém o valor
-                        # e aplica o formato de texto para garantir consistência.
-                        cell.number_format = '@'
-                
-                # --- Lógica original para as outras abas (Leitura/Escrita) ---
+                # Lógica de alinhamento (sugestão: Opção 2 da resposta anterior)
+                if col_num == 1:
+                    cell.alignment = alinhamento_esquerda
                 else:
-                    if isinstance(cell.value, (int, float)):
-                        if cell.value < 1:  # Percentuais
-                            cell.number_format = '0'
-                        else:  # Números inteiros
-                            cell.number_format = '#,##0'
+                    cell.alignment = alinhamento_centro
+                
+                # Lógica de formatação de números (que já existia)
+                if isinstance(cell.value, (int, float)):
+                    cell.number_format = '#,##0'
     
     # Ajustar largura das colunas com valores mínimos
     larguras_minimas = {
         'A': 8,   # Ano
         'B': 25,  # Total de Alunos
-        'C': 8,   # NL, LS, etc.
-        'D': 8,   # Percentuais
-        'E': 8,
-        'F': 8,
-        'G': 8,
-        'H': 8,
+        'C': 10,   # NL, LS, etc.
+        'D': 10,   # Percentuais
+        'E': 10,
+        'F': 10,
+        'G': 10,
+        'H': 10,
         'I': 10,
         'J': 10,
         'K': 10,
@@ -301,7 +303,7 @@ def aplicar_formatacao_excel(worksheet, df, titulo, cor_cabecalho='1abc9c', tipo
         print("Aplicando dimensões personalizadas para a aba de Resumo Estatístico...")
 
         # LARGURA DAS COLUNAS para a aba de estatísticas
-        worksheet.column_dimensions['A'].width = 40  # Coluna 'Métrica'
+        worksheet.column_dimensions['A'].width = 45  # Coluna 'Métrica'
         worksheet.column_dimensions['B'].width = 25  # Coluna 'Valor'
 
         # ALTURA DAS LINHAS para a aba de estatísticas

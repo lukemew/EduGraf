@@ -260,46 +260,92 @@ class Operations:
         
        # CÓDIGO COMPLETO E CORRIGIDO PARA A ABA DE ESTATÍSTICAS
 
-        # 1. CRIA o dicionário com os dados, exatamente como antes
+        # NO ARQUIVO operations.py, DENTRO DE _save_real_format_table
+
+        # --- Seção da Aba de Estatísticas Aprimorada ---
+
+        # NO ARQUIVO operations.py, DENTRO DE _save_real_format_table
+
+# --- Seção da Aba de Estatísticas (Versão Final com EJA) ---
+
+        # 1. Cálculos Preliminares
+        df_leitura = processed_data['leitura']
+        df_escrita = processed_data['escrita']
+
+        # Cálculos para Percentuais Gerais
+        total_geral_leitura = df_leitura['total alunos'].sum()
+        total_geral_escrita = df_escrita['total alunos'].sum()
+
+        # Cálculos para Análise de Progressão (Fund I vs Fund II, incluindo EJA)
+        anos_fund1 = ['1°', '2°', '3°', '4°', '5°', 'EJA SEG I'] # <-- ALTERAÇÃO AQUI
+        anos_fund2 = ['6°', '7°', '8°', '9°', 'EJA SEG II']    # <-- ALTERAÇÃO AQUI
+
+        # Leitura
+        df_fund1_leitura = df_leitura[df_leitura['ano'].isin(anos_fund1)]
+        df_fund2_leitura = df_leitura[df_leitura['ano'].isin(anos_fund2)]
+        perc_prof_leitura_f1 = (df_fund1_leitura['lcf'].sum() / df_fund1_leitura['total alunos'].sum() * 100) if not df_fund1_leitura.empty and df_fund1_leitura['total alunos'].sum() > 0 else 0
+        perc_prof_leitura_f2 = (df_fund2_leitura['lcf'].sum() / df_fund2_leitura['total alunos'].sum() * 100) if not df_fund2_leitura.empty and df_fund2_leitura['total alunos'].sum() > 0 else 0
+
+        # Escrita (Proficientes = Alfabético + Ortográfico)
+        df_fund1_escrita = df_escrita[df_escrita['ano'].isin(anos_fund1)]
+        df_fund2_escrita = df_escrita[df_escrita['ano'].isin(anos_fund2)]
+        soma_prof_escrita_f1 = df_fund1_escrita['a'].sum() + df_fund1_escrita['o'].sum()
+        soma_prof_escrita_f2 = df_fund2_escrita['a'].sum() + df_fund2_escrita['o'].sum()
+        perc_prof_escrita_f1 = (soma_prof_escrita_f1 / df_fund1_escrita['total alunos'].sum() * 100) if not df_fund1_escrita.empty and df_fund1_escrita['total alunos'].sum() > 0 else 0
+        perc_prof_escrita_f2 = (soma_prof_escrita_f2 / df_fund2_escrita['total alunos'].sum() * 100) if not df_fund2_escrita.empty and df_fund2_escrita['total alunos'].sum() > 0 else 0
+
+
+        # 2. Construção do Dicionário de Dados Refinado
         stats_data = {
             'Métrica': [
-                'Total de Anos/Séries',
-                'Total Alunos (Leitura)',
-                'Total Alunos (Escrita)',
-                'Média % Não Leitores',
-                'Média % Leitores Fluentes',
-                'Média % Pré-Silábicos',
-                'Média % Ortográficos'
+                '--- PERCENTUAIS GERAIS ---',
+                'Total de Alunos (Leitura)',
+                'Total de Alunos (Escrita)',
+                'Percentual Geral de Não Leitores (NL)',
+                'Percentual Geral de Leitores Fluentes (LCF)',
+                'Percentual Geral de Pré-Silábicos (P)',
+                'Percentual Geral de Ortográficos (O)',
+                '--- ANÁLISE DE PROGRESSÃO ---', # Título atualizado
+                '% de Leitores Fluentes (Fund. I + EJA I)',
+                '% de Leitores Fluentes (Fund. II + EJA II)',
+                '% de Alunos Ortográficos (Fund. I + EJA I)',
+                '% de Alunos Ortográficos (Fund. II + EJA II)',
+                '--- MÉDIAS POR SÉRIE ---',
+                'Média % de Não Leitores por série (NL)',
+                'Média % de Leitores Fluentes por série (LCF)',
+                'Média % de Pré-Silábicos por série (P)',
+                'Média % de Ortográficos por série (O)',
             ],
             'Valor': [
-                len(processed_data['leitura']),
-                processed_data['leitura']['total alunos'].sum(),
-                processed_data['escrita']['total alunos'].sum(),
-                f"{processed_data['leitura']['nl_%'].mean():.1f}%",
-                f"{processed_data['leitura']['lcf_%'].mean():.1f}%",
-                f"{processed_data['escrita']['p_%'].mean():.1f}%",
-                f"{processed_data['escrita']['o_%'].mean():.1f}%"
+                '', # Linha em branco para separar seções
+                f"{total_geral_leitura} (100%)",
+                f"{total_geral_escrita} (100%)",
+                f"{(df_leitura['nl'].sum() / total_geral_leitura * 100):.1f}%",
+                f"{(df_leitura['lcf'].sum() / total_geral_leitura * 100):.1f}%",
+                f"{(df_escrita['p'].sum() / total_geral_escrita * 100):.1f}%",
+                f"{(df_escrita['o'].sum() / total_geral_escrita * 100):.1f}%",
+                '', # Linha em branco
+                f"{perc_prof_leitura_f1:.1f}%",
+                f"{perc_prof_leitura_f2:.1f}%",
+                f"{perc_prof_escrita_f1:.1f}%",
+                f"{perc_prof_escrita_f2:.1f}%",
+                '', # Linha em branco
+                f"{df_leitura['nl_%'].mean():.1f}%",
+                f"{df_leitura['lcf_%'].mean():.1f}%",
+                f"{df_escrita['p_%'].mean():.1f}%",
+                f"{df_escrita['o_%'].mean():.1f}%",
             ]
         }
 
-        # 2. CONVERTE o dicionário para um DataFrame pandas (A LINHA QUE FALTAVA)
+        # 3. Conversão para DataFrame e escrita na planilha (código que já tínhamos)
         stats_df = pd.DataFrame(stats_data)
-
-        # 3. CRIA a nova aba na planilha
         ws_stats = wb.create_sheet("Resumo Estatístico")
-
-        # 4. ESCREVE o DataFrame manualmente, célula por célula
-        # Escreve o cabeçalho
+        # (O resto do código para escrever o df e chamar a formatação continua o mesmo)
         for c_idx, value in enumerate(stats_df.columns, 1):
             ws_stats.cell(row=2, column=c_idx, value=str(value).title())
-
-        # Escreve as linhas de dados
         for r_idx, row in enumerate(stats_df.itertuples(), 3):
-            # row[0] é o índice, row[1] é a Métrica, row[2] é o Valor
             ws_stats.cell(row=r_idx, column=1, value=row[1])
             ws_stats.cell(row=r_idx, column=2, value=row[2])
-
-        # 5. APLICA a formatação final usando a função que já tínhamos
         aplicar_formatacao_excel(ws_stats, stats_df, 
                                 f"📈 RESUMO ESTATÍSTICO - {polo.upper()}", 'e74c3c')
         
