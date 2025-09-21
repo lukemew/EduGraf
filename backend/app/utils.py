@@ -134,34 +134,51 @@ def aplicar_formatacao_excel(worksheet, df, titulo, cor_cabecalho='1abc9c', tipo
             if row_num % 2 == 0:
                 cell.fill = preenchimento_linha_par
             
-            # Alinhamento baseado no tipo de dados
-            if col_num == 1:  # Primeira coluna (geralmente texto)
+                 # Alinhamento baseado no tipo de dados
+            if col_num == 1:  # Primeira coluna (Métrica)
                 cell.alignment = alinhamento_esquerda
-            else:  # Colunas numéricas
-                cell.alignment = alinhamento_direita
-                # Formatar números
-                if isinstance(cell.value, (int, float)):
-                    if cell.value < 1:  # Percentuais
-                        cell.number_format = '0'
-                    else:  # Números inteiros
-                        cell.number_format = '#,##0'
+            else:  # Segunda coluna (Valor)
+                cell.alignment = alinhamento_centro 
+                
+                # --- LÓGICA ESPECIAL PARA A ABA DE ESTATÍSTICAS ---
+                if "RESUMO ESTATÍSTICO" in titulo.upper():
+                    # Pega o nome da métrica na primeira coluna da mesma linha
+                    celula_metrica = worksheet.cell(row=row_num, column=1).value
+                    
+                    # Se a métrica for "Total Alunos", adiciona o (100%)
+                    if "TOTAL ALUNOS" in str(celula_metrica).upper():
+                        valor_numerico = cell.value
+                        cell.value = f"{valor_numerico} (100%)"
+                        cell.number_format = '@'  # Força a célula a ser tratada como texto
+                    else:
+                        # Para as outras linhas (que já são %), mantém o valor
+                        # e aplica o formato de texto para garantir consistência.
+                        cell.number_format = '@'
+                
+                # --- Lógica original para as outras abas (Leitura/Escrita) ---
+                else:
+                    if isinstance(cell.value, (int, float)):
+                        if cell.value < 1:  # Percentuais
+                            cell.number_format = '0'
+                        else:  # Números inteiros
+                            cell.number_format = '#,##0'
     
     # Ajustar largura das colunas com valores mínimos
     larguras_minimas = {
         'A': 8,   # Ano
-        'B': 15,  # Total de Alunos
+        'B': 25,  # Total de Alunos
         'C': 8,   # NL, LS, etc.
         'D': 8,   # Percentuais
         'E': 8,
         'F': 8,
         'G': 8,
         'H': 8,
-        'I': 8,
-        'J': 8,
-        'K': 8,
-        'L': 8,
-        'M': 8,
-        'N': 8
+        'I': 10,
+        'J': 10,
+        'K': 10,
+        'L': 10,
+        'M': 12,
+        'N': 12
     }
     
     for col_idx, column in enumerate(worksheet.columns):
@@ -203,7 +220,7 @@ def aplicar_formatacao_excel(worksheet, df, titulo, cor_cabecalho='1abc9c', tipo
     
     # Título da legenda
     cell_legenda_titulo = worksheet.cell(row=linha_legenda, column=1)
-    cell_legenda_titulo.value = "📚 LEGENDA - SIGNIFICADO DAS ABREVIAÇÕES"
+    cell_legenda_titulo.value = " LEGENDA - SIGNIFICADO DAS ABREVIAÇÕES"
     cell_legenda_titulo.font = Font(name='Arial', size=12, bold=True, color='FFFFFF')
     cell_legenda_titulo.fill = PatternFill(start_color=cores['secundaria'], end_color=cores['secundaria'], fill_type='solid')
     cell_legenda_titulo.alignment = alinhamento_centro
@@ -279,6 +296,26 @@ def aplicar_formatacao_excel(worksheet, df, titulo, cor_cabecalho='1abc9c', tipo
     
     # Congelar painéis (cabeçalho sempre visível)
     worksheet.freeze_panes = 'A3'
+    print("Ajustando dimensões personalizadas...")
+    if "RESUMO ESTATÍSTICO" in titulo.upper():
+        print("Aplicando dimensões personalizadas para a aba de Resumo Estatístico...")
+
+        # LARGURA DAS COLUNAS para a aba de estatísticas
+        worksheet.column_dimensions['A'].width = 40  # Coluna 'Métrica'
+        worksheet.column_dimensions['B'].width = 25  # Coluna 'Valor'
+
+        # ALTURA DAS LINHAS para a aba de estatísticas
+        worksheet.row_dimensions[1].height = 40  # Linha do Título Principal
+        worksheet.row_dimensions[2].height = 30  # Linha do Cabeçalho ('Métrica', 'Valor')
+    
+    else:
+        # Dimensões para as outras abas (Leitura e Escrita)
+        print(f"Aplicando dimensões padrão para a aba '{titulo}'...")
+        worksheet.column_dimensions['A'].width = 15 # Coluna 'Ano'
+        worksheet.column_dimensions['B'].width = 20 # Coluna 'Total de Alunos'
+
+
+    print(f"--- FIM DO DIAGNÓSTICO PARA A ABA: '{titulo}' ---\n")
     
     return worksheet
 

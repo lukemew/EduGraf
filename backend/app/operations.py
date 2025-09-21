@@ -245,7 +245,7 @@ class Operations:
                 ws_leitura.cell(row=r_idx, column=c_idx, value=value)
         # AGORA CHAMA A FORMATAÇÃO
         aplicar_formatacao_excel(ws_leitura, processed_data['leitura'], 
-                                f"📊 DADOS DE LEITURA - {polo.upper()}", '1abc9c', 'leitura')
+                                f" DADOS DE LEITURA - {polo.upper()}", '1abc9c', 'leitura')
 
         # Aba de Escrita
         ws_escrita = wb.create_sheet("Dados de Escrita")
@@ -256,9 +256,11 @@ class Operations:
                 ws_escrita.cell(row=r_idx, column=c_idx, value=value)
         # AGORA CHAMA A FORMATAÇÃO
         aplicar_formatacao_excel(ws_escrita, processed_data['escrita'], 
-                                f"✍️ DADOS DE ESCRITA - {polo.upper()}", '3498db', 'escrita')
+                                f" DADOS DE ESCRITA - {polo.upper()}", '3498db', 'escrita')
         
-        # Aba de Estatísticas
+       # CÓDIGO COMPLETO E CORRIGIDO PARA A ABA DE ESTATÍSTICAS
+
+        # 1. CRIA o dicionário com os dados, exatamente como antes
         stats_data = {
             'Métrica': [
                 'Total de Anos/Séries',
@@ -279,13 +281,27 @@ class Operations:
                 f"{processed_data['escrita']['o_%'].mean():.1f}%"
             ]
         }
-        
+
+        # 2. CONVERTE o dicionário para um DataFrame pandas (A LINHA QUE FALTAVA)
         stats_df = pd.DataFrame(stats_data)
+
+        # 3. CRIA a nova aba na planilha
         ws_stats = wb.create_sheet("Resumo Estatístico")
-        for r in dataframe_to_rows(stats_df, index=False, header=True):
-            ws_stats.append(r)
+
+        # 4. ESCREVE o DataFrame manualmente, célula por célula
+        # Escreve o cabeçalho
+        for c_idx, value in enumerate(stats_df.columns, 1):
+            ws_stats.cell(row=2, column=c_idx, value=str(value).title())
+
+        # Escreve as linhas de dados
+        for r_idx, row in enumerate(stats_df.itertuples(), 3):
+            # row[0] é o índice, row[1] é a Métrica, row[2] é o Valor
+            ws_stats.cell(row=r_idx, column=1, value=row[1])
+            ws_stats.cell(row=r_idx, column=2, value=row[2])
+
+        # 5. APLICA a formatação final usando a função que já tínhamos
         aplicar_formatacao_excel(ws_stats, stats_df, 
-                               f"📈 RESUMO ESTATÍSTICO - {polo.upper()}", 'e74c3c')
+                                f"📈 RESUMO ESTATÍSTICO - {polo.upper()}", 'e74c3c')
         
         # Salvar arquivo
         wb.save(output_file)
@@ -314,7 +330,7 @@ class Operations:
         for r in dataframe_to_rows(processed_data, index=False, header=True):
             ws_dados.append(r)
         aplicar_formatacao_excel(ws_dados, processed_data, 
-                               f"📋 DADOS CONSOLIDADOS - {polo.upper()}", '1abc9c', 'leitura')
+                               f" DADOS CONSOLIDADOS - {polo.upper()}", '1abc9c', 'leitura')
         
         # Estatísticas básicas
         if not processed_data.empty:
@@ -335,13 +351,23 @@ class Operations:
                 ]
             }
             
-            stats_df = pd.DataFrame(stats_data)
             ws_stats = wb.create_sheet("Resumo Estatístico")
-            for r in dataframe_to_rows(stats_df, index=False, header=True):
-                ws_stats.append(r)
+
+            # Vamos escrever o DataFrame manualmente, nos dando controle total.
+            # Escreve o cabeçalho primeiro
+            for c_idx, value in enumerate(stats_df.columns, 1):
+                ws_stats.cell(row=2, column=c_idx, value=value)
+
+            # Escreve as linhas de dados
+            for r_idx, row in enumerate(stats_df.itertuples(), 3):
+                # row[1] é a Métrica, row[2] é o Valor
+                ws_stats.cell(row=r_idx, column=1, value=row[1])
+                ws_stats.cell(row=r_idx, column=2, value=row[2])
+
+            # AGORA, a formatação vai funcionar sobre células que já têm o valor correto.
             aplicar_formatacao_excel(ws_stats, stats_df, 
-                                   f"📈 RESUMO ESTATÍSTICO - {polo.upper()}", 'e74c3c')
-        
+                                    f"📈 RESUMO ESTATÍSTICO - {polo.upper()}", 'e74c3c')
+                    
         # Salvar arquivo
         wb.save(output_file)
         
