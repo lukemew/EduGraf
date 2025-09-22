@@ -6,11 +6,11 @@
   font-family: sans-serif;
 }
 
-.file-input {
+.file-upload-input {
   display: none;
 }
 
-.file-label {
+.file-upload-label {
   background-color: #e9ecef;
   color: var(--cor-primaria);
   font-weight: bold;
@@ -20,16 +20,16 @@
   transition: background-color 0.2s;
 }
 
-.file-label:hover {
+.file-upload-label:hover {
   background-color: #dde1e4;
 }
 
-.file-name {
+.file-upload-name {
   margin-right: 6rem;
   color: #6c757d;
 }
 
-.file-name.no-file {
+.file-upload-name.no-file {
   color: #dc3545;
   font-weight: bold;
 }

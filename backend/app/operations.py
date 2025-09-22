@@ -11,7 +11,6 @@ from app.utils import (
     process_excel_file_real,
     process_excel_file,
     generate_charts_real,
-    generate_charts,
     create_pdf_report,
     debug_dataframe_sections,
     aplicar_formatacao_excel
@@ -76,45 +75,79 @@ class Operations:
     
     async def gerar_graficos(self, files: List[UploadFile], trimestre: int) -> str:
         """
-        Gera gráficos e relatório PDF
-        
-        Args:
-            files: Lista de arquivos Excel
-            trimestre: Número do trimestre
-            
-        Returns:
-            Caminho do arquivo PDF gerado
+        Gera gráficos e relatório PDF.
+        - Se receber 1 arquivo, gera gráficos de período único.
+        - Se receber 2 arquivos, gera gráficos comparativos.
         """
         try:
             print(f"📈 Gerando gráficos para o {trimestre}º trimestre")
-            
-            # Processar o primeiro arquivo
-            file = files[0]
-            contents = await file.read()
-            df = pd.read_excel(io.BytesIO(contents), header=None)
-            
-            print(f"📄 Arquivo lido: {file.filename} - Shape: {df.shape}")
-            
-            # Debug detalhado
-            debug_dataframe_sections(df)
-            
-            # Detectar formato e processar
-            is_real_format = self._check_if_real_format(df)
-            print(f"🔍 Formato detectado: {'Real da Prefeitura' if is_real_format else 'Formato Antigo'}")
-            
-            if is_real_format:
-                # Processar formato real
+            from app.utils import generate_charts_real, gerar_grafico_comparativo_periodos, create_pdf_report
+
+            charts_data = {}
+
+            # --- CENÁRIO 1: GRÁFICO DE PERÍODO ÚNICO ---
+            if len(files) == 1:
+                print("📄 Detectado 1 arquivo. Gerando gráficos de período único.")
+                contents = await files[0].read()
+                df = pd.read_excel(io.BytesIO(contents), header=None)
                 processed_data = process_excel_file_real(df, "Geral")
-                charts_data = generate_charts_real(processed_data, trimestre)
-            else:
-                # Processar formato antigo
-                header_row = self._find_header_row(df)
-                if header_row is not None:
-                    df = pd.read_excel(io.BytesIO(contents), header=header_row)
                 
-                charts_data = generate_charts(df, trimestre)
+                # Chama a função antiga que gera vários gráficos para um único período
+                charts_data = generate_charts_real(processed_data, trimestre)
+
+            # --- CENÁRIO 2: GRÁFICO COMPARATIVO ---
+            elif len(files) == 2:
+                print("📄 Detectados 2 arquivos. Gerando gráficos comparativos por segmento.")
+                contents_p1 = await files[0].read()
+                df_p1 = pd.read_excel(io.BytesIO(contents_p1), header=None)
+                processed_data_p1 = process_excel_file_real(df_p1, "Geral")
+                
+                contents_p2 = await files[1].read()
+                df_p2 = pd.read_excel(io.BytesIO(contents_p2), header=None)
+                processed_data_p2 = process_excel_file_real(df_p2, "Geral")
+
+                # Define os grupos de séries
+                anos_fund1 = ['1°', '2°', '3°', '4°', '5°', 'EJA SEG I'] # <-- ALTERAÇÃO AQUI
+                anos_fund2 = ['6°', '7°', '8°', '9°', 'EJA SEG II']    # <-- ALTERAÇÃO AQUI
+
+                # --- Gera os 4 gráficos solicitados ---
+
+                # Gráfico 1: NL - Fund. I
+                charts_data['nl_fund1'] = gerar_grafico_comparativo_periodos(
+                    data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='nl',
+                    series_selecionadas=anos_fund1,
+                    titulo_grafico='Comparativo de Alunos Não Leitores (NL)',
+                    subtitulo_grafico='Segmento: Fundamental I (1º ao 5º ano e EJA I)'
+                )
+                
+                # Gráfico 2: NL - Fund. II
+                charts_data['nl_fund2'] = gerar_grafico_comparativo_periodos(
+                    data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='nl',
+                    series_selecionadas=anos_fund2,
+                    titulo_grafico='Comparativo de Alunos Não Leitores (NL)',
+                    subtitulo_grafico='Segmento: Fundamental II (6º ao 9º ano e EJA II)'
+                )
+
+                # Gráfico 3: P - Fund. I
+                charts_data['p_fund1'] = gerar_grafico_comparativo_periodos(
+                    data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='p',
+                    series_selecionadas=anos_fund1,
+                    titulo_grafico='Comparativo de Alunos Pré-Silábicos (P)',
+                    subtitulo_grafico='Segmento: Fundamental I (1º ao 5º ano e EJA I)'
+                )
+
+                # Gráfico 4: P - Fund. II
+                charts_data['p_fund2'] = gerar_grafico_comparativo_periodos(
+                    data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='p',
+                    series_selecionadas=anos_fund2,
+                    titulo_grafico='Comparativo de Alunos Pré-Silábicos (P)',
+                    subtitulo_grafico='Segmento: Fundamental II (6º ao 9º ano e EJA II)'
+                )
             
-            # Criar PDF
+            else:
+                raise ValueError("Número de arquivos inválido. Envie 1 ou 2 arquivos.")
+
+            # --- Cria o relatório PDF com os gráficos gerados ---
             pdf_path = create_pdf_report(charts_data, trimestre)
             
             print(f"✅ Relatório PDF gerado: {pdf_path}")
@@ -122,6 +155,8 @@ class Operations:
             
         except Exception as e:
             print(f"❌ Erro na geração de gráficos: {e}")
+            import traceback
+            traceback.print_exc()
             raise e
     
     async def processar_planilhas_simples(self, files: List[UploadFile]) -> dict:
@@ -258,15 +293,6 @@ class Operations:
         aplicar_formatacao_excel(ws_escrita, processed_data['escrita'], 
                                 f" DADOS DE ESCRITA - {polo.upper()}", '3498db', 'escrita')
         
-       # CÓDIGO COMPLETO E CORRIGIDO PARA A ABA DE ESTATÍSTICAS
-
-        # NO ARQUIVO operations.py, DENTRO DE _save_real_format_table
-
-        # --- Seção da Aba de Estatísticas Aprimorada ---
-
-        # NO ARQUIVO operations.py, DENTRO DE _save_real_format_table
-
-# --- Seção da Aba de Estatísticas (Versão Final com EJA) ---
 
         # 1. Cálculos Preliminares
         df_leitura = processed_data['leitura']

@@ -8,7 +8,7 @@ import base64
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, KeepTogether
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 import os
@@ -706,486 +706,214 @@ def process_excel_file(df: pd.DataFrame, polo: str) -> pd.DataFrame:
 
 def generate_charts_real(data: Dict[str, Any], quant_trimestre: int) -> Dict[str, Any]:
     """
-    Gera gráficos estilizados e profissionais baseados no formato real da planilha da prefeitura
-    
-    Args:
-        data: Dados processados (leitura e escrita)
-        quant_trimestre: Número do trimestre
-    
-    Returns:
-        Dicionário com gráficos e análises
+    Gera gráficos estilizados para um único período, com o novo padrão visual.
     """
     try:
-        print(f"🔍 DEBUG: Iniciando geração de gráficos para {quant_trimestre}º trimestre")
+        print(f"🔍 DEBUG: Iniciando geração de gráficos (período único) para {quant_trimestre}º trimestre")
         
         charts_data = {}
-        
         df_leitura = data['leitura']
         df_escrita = data['escrita']
         
-        # Configurar estilo global dos gráficos
-        plt.style.use('default')
-        sns.set_palette("husl")
-        
-        # Cores do sistema EduGraf
-        cores_sistema = {
-            'primaria': '#165b70',
-            'secundaria': '#3d626d', 
-            'destaque': '#1abc9c',
-            'accent': '#3498db',
-            'warning': '#f39c12',
-            'danger': '#e74c3c',
-            'success': '#2ecc71',
-            'info': '#9b59b6'
-        }
-        
-        # Cores específicas para os níveis
-        cores_leitura = ['#e74c3c', '#f39c12', '#3498db', '#2ecc71', '#9b59b6', '#1abc9c']
-        cores_escrita = ['#e74c3c', '#f39c12', '#3498db', '#2ecc71', '#1abc9c']
-        
-        # Garantir que o diretório temp existe
+        # Função interna para adicionar valores no topo das barras
+        def autolabel(bars, ax):
+            for bar in bars:
+                height = bar.get_height()
+                if height > 0:
+                    ax.text(bar.get_x() + bar.get_width()/2.0, height, f'{int(height)}',
+                            ha='center', va='bottom', fontsize=9, fontweight='bold')
+
         os.makedirs("temp", exist_ok=True)
-        
-        # Gráfico 1: Níveis de Leitura por Ano (Estilizado)
-        print("🔍 DEBUG: Gerando gráfico de leitura...")
-        fig1, ax1 = plt.subplots(figsize=(14, 9))
+
+        # --- Gráfico 1: Níveis de Leitura por Ano (Reestilizado) ---
+        fig1, ax1 = plt.subplots(figsize=(14, 8))
         fig1.patch.set_facecolor('white')
         
-        anos = df_leitura['ano'].astype(str)
-        x = np.arange(len(anos))
-        width = 0.12
+        leitura_metrics = ['nl', 'ls', 'lp', 'lf', 'lsf', 'lcf']
+        leitura_labels = ['NL', 'LS', 'LP', 'LF', 'LSF', 'LCF']
         
-        # Criar gráfico de barras estilizado para leitura
-        bars1 = ax1.bar(x - 2.5*width, df_leitura['nl'], width, label='NL (Não Leitor)', 
-                       color=cores_leitura[0], alpha=0.8, edgecolor='white', linewidth=1)
-        bars2 = ax1.bar(x - 1.5*width, df_leitura['ls'], width, label='LS (Leitor de Sílabas)', 
-                       color=cores_leitura[1], alpha=0.8, edgecolor='white', linewidth=1)
-        bars3 = ax1.bar(x - 0.5*width, df_leitura['lp'], width, label='LP (Leitor de Palavras)', 
-                       color=cores_leitura[2], alpha=0.8, edgecolor='white', linewidth=1)
-        bars4 = ax1.bar(x + 0.5*width, df_leitura['lf'], width, label='LF (Leitor de Frases)', 
-                       color=cores_leitura[3], alpha=0.8, edgecolor='white', linewidth=1)
-        bars5 = ax1.bar(x + 1.5*width, df_leitura['lsf'], width, label='LSF (Leitor Sem Fluência)', 
-                       color=cores_leitura[4], alpha=0.8, edgecolor='white', linewidth=1)
-        bars6 = ax1.bar(x + 2.5*width, df_leitura['lcf'], width, label='LCF (Leitor Com Fluência)', 
-                       color=cores_leitura[5], alpha=0.8, edgecolor='white', linewidth=1)
-        
-        # Estilizar eixos e títulos
-        ax1.set_xlabel('Anos/Séries', fontsize=12, fontweight='bold', color=cores_sistema['primaria'])
-        ax1.set_ylabel('Quantidade de Alunos', fontsize=12, fontweight='bold', color=cores_sistema['primaria'])
-        ax1.set_title(f'Diagnóstico de Leitura - {quant_trimestre}º Trimestre', 
-                     fontsize=16, fontweight='bold', color=cores_sistema['primaria'], pad=20)
-        
-        # Configurar ticks
-        ax1.set_xticks(x)
-        ax1.set_xticklabels(anos, rotation=45, ha='right', fontsize=10)
-        ax1.tick_params(axis='y', labelsize=10)
-        
-        # Configurar legenda
-        ax1.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=9, frameon=True, 
-                  fancybox=True, shadow=True)
-        
-        # Configurar grid
-        ax1.grid(True, alpha=0.3, linestyle='--', color=cores_sistema['secundaria'])
+        # Usando um gráfico de barras empilhadas para clareza
+        bottom = np.zeros(len(df_leitura))
+        for i, metric in enumerate(leitura_metrics):
+            bars = ax1.bar(df_leitura['ano'], df_leitura[metric], label=leitura_labels[i], bottom=bottom,
+                           edgecolor='white', linewidth=0.5)
+            # Para adicionar rótulos em barras empilhadas, seria mais complexo, então vamos omitir por simplicidade
+            bottom += df_leitura[metric].values
+
+        ax1.set_title(f'Diagnóstico de Leitura - {quant_trimestre}º Trimestre', fontweight='bold', fontsize=14)
+        ax1.set_xlabel('')
+        ax1.set_ylabel('')
+        ax1.tick_params(axis='x', rotation=45)
+        ax1.grid(True, alpha=0.5, linestyle='-', axis='y', color='lightgray')
         ax1.set_axisbelow(True)
-        
-        # Adicionar valores nas barras
-        for bars in [bars1, bars2, bars3, bars4, bars5, bars6]:
-            for bar in bars:
-                height = bar.get_height()
-                if height > 0:
-                    ax1.text(bar.get_x() + bar.get_width()/2., height + 0.1,
-                            f'{int(height)}', ha='center', va='bottom', fontsize=8, fontweight='bold')
-        
-        # Configurar layout
+        ax1.spines['top'].set_visible(False)
+        ax1.spines['right'].set_visible(False)
+        ax1.spines['left'].set_visible(False)
+        ax1.spines['bottom'].set_color('lightgray')
+        ax1.legend(loc='upper right', frameon=False, fontsize=10, ncol=len(leitura_metrics))
         plt.tight_layout()
         
-        # Salvar gráfico
-        chart1_path = f"temp/leitura_real_chart_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-        fig1.savefig(chart1_path, dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
+        chart1_path = f"temp/leitura_periodo_unico_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+        fig1.savefig(chart1_path, dpi=300, bbox_inches='tight', facecolor='white')
         plt.close(fig1)
-        
         charts_data['leitura_chart'] = {
-            'path': chart1_path,
-            'title': f'Diagnóstico de Leitura - {quant_trimestre}º Trimestre',
-            'description': f'Análise detalhada da distribuição dos níveis de leitura por ano/série. O gráfico apresenta {len(df_leitura)} anos/séries avaliados, mostrando a evolução do desenvolvimento da leitura desde não leitores até leitores com fluência total.'
+            'path': chart1_path, 'title': f'Diagnóstico de Leitura - {quant_trimestre}º Trimestre',
+            'description': 'Distribuição dos níveis de leitura por ano/série para o período.'
         }
-        
-        # Gráfico 2: Níveis de Escrita por Ano (Estilizado)
-        print("🔍 DEBUG: Gerando gráfico de escrita...")
-        fig2, ax2 = plt.subplots(figsize=(14, 9))
+
+        # --- Gráfico 2: Níveis de Escrita por Ano (Reestilizado) ---
+        fig2, ax2 = plt.subplots(figsize=(14, 8))
         fig2.patch.set_facecolor('white')
         
-        anos_escrita = df_escrita['ano'].astype(str)
-        x = np.arange(len(anos_escrita))
-        
-        # Criar gráfico de barras estilizado para escrita
-        bars1 = ax2.bar(x - 2*width, df_escrita['p'], width, label='P (Pré-Silábico)', 
-                       color=cores_escrita[0], alpha=0.8, edgecolor='white', linewidth=1)
-        bars2 = ax2.bar(x - width, df_escrita['s'], width, label='S (Silábico)', 
-                       color=cores_escrita[1], alpha=0.8, edgecolor='white', linewidth=1)
-        bars3 = ax2.bar(x, df_escrita['s.a.'], width, label='S.A. (Silábico Alfabético)', 
-                       color=cores_escrita[2], alpha=0.8, edgecolor='white', linewidth=1)
-        bars4 = ax2.bar(x + width, df_escrita['a'], width, label='A (Alfabético)', 
-                       color=cores_escrita[3], alpha=0.8, edgecolor='white', linewidth=1)
-        bars5 = ax2.bar(x + 2*width, df_escrita['o'], width, label='O (Ortográfico)', 
-                       color=cores_escrita[4], alpha=0.8, edgecolor='white', linewidth=1)
-        
-        # Estilizar eixos e títulos
-        ax2.set_xlabel('Anos/Séries', fontsize=12, fontweight='bold', color=cores_sistema['primaria'])
-        ax2.set_ylabel('Quantidade de Alunos', fontsize=12, fontweight='bold', color=cores_sistema['primaria'])
-        ax2.set_title(f'Diagnóstico de Escrita - {quant_trimestre}º Trimestre', 
-                     fontsize=16, fontweight='bold', color=cores_sistema['primaria'], pad=20)
-        
-        # Configurar ticks
-        ax2.set_xticks(x)
-        ax2.set_xticklabels(anos_escrita, rotation=45, ha='right', fontsize=10)
-        ax2.tick_params(axis='y', labelsize=10)
-        
-        # Configurar legenda
-        ax2.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=9, frameon=True, 
-                  fancybox=True, shadow=True)
-        
-        # Configurar grid
-        ax2.grid(True, alpha=0.3, linestyle='--', color=cores_sistema['secundaria'])
+        escrita_metrics = ['p', 's', 's.a.', 'a', 'o']
+        escrita_labels = ['P', 'S', 'S.A.', 'A', 'O']
+
+        bottom = np.zeros(len(df_escrita))
+        for i, metric in enumerate(escrita_metrics):
+            bars = ax2.bar(df_escrita['ano'], df_escrita[metric], label=escrita_labels[i], bottom=bottom,
+                           edgecolor='white', linewidth=0.5)
+            bottom += df_escrita[metric].values
+
+        ax2.set_title(f'Diagnóstico de Escrita - {quant_trimestre}º Trimestre', fontweight='bold', fontsize=14)
+        ax2.set_xlabel('')
+        ax2.set_ylabel('')
+        ax2.tick_params(axis='x', rotation=45)
+        ax2.grid(True, alpha=0.5, linestyle='-', axis='y', color='lightgray')
         ax2.set_axisbelow(True)
-        
-        # Adicionar valores nas barras
-        for bars in [bars1, bars2, bars3, bars4, bars5]:
-            for bar in bars:
-                height = bar.get_height()
-                if height > 0:
-                    ax2.text(bar.get_x() + bar.get_width()/2., height + 0.1,
-                            f'{int(height)}', ha='center', va='bottom', fontsize=8, fontweight='bold')
-        
-        # Configurar layout
+        ax2.spines['top'].set_visible(False)
+        ax2.spines['right'].set_visible(False)
+        ax2.spines['left'].set_visible(False)
+        ax2.spines['bottom'].set_color('lightgray')
+        ax2.legend(loc='upper right', frameon=False, fontsize=10, ncol=len(escrita_metrics))
         plt.tight_layout()
-        
-        # Salvar gráfico
-        chart2_path = f"temp/escrita_real_chart_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-        fig2.savefig(chart2_path, dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
+
+        chart2_path = f"temp/escrita_periodo_unico_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+        fig2.savefig(chart2_path, dpi=300, bbox_inches='tight', facecolor='white')
         plt.close(fig2)
-        
         charts_data['escrita_chart'] = {
-            'path': chart2_path,
-            'title': f'Diagnóstico de Escrita - {quant_trimestre}º Trimestre',
-            'description': f'Análise detalhada da distribuição dos níveis de escrita por ano/série. O gráfico apresenta {len(df_escrita)} anos/séries avaliados, mostrando a evolução do desenvolvimento da escrita desde pré-silábicos até ortográficos.'
+            'path': chart2_path, 'title': f'Diagnóstico de Escrita - {quant_trimestre}º Trimestre',
+            'description': 'Distribuição dos níveis de escrita por ano/série para o período.'
         }
-        
-        # Gráfico 3: Comparação Geral Leitura vs Escrita (Estilizado)
-        print("🔍 DEBUG: Gerando gráfico de comparação...")
-        fig3, ax3 = plt.subplots(figsize=(12, 8))
-        fig3.patch.set_facecolor('white')
-        
-        # Calcular totais gerais
-        total_leitura = df_leitura[['nl', 'ls', 'lp', 'lf', 'lsf', 'lcf']].sum()
-        total_escrita = df_escrita[['p', 's', 's.a.', 'a', 'o']].sum()
-        
-        categorias_leitura = ['NL', 'LS', 'LP', 'LF', 'LSF', 'LCF']
-        categorias_escrita = ['P', 'S', 'S.A.', 'A', 'O']
-        
-        # Usar apenas as primeiras 5 categorias para comparação
-        categorias_comparacao = categorias_leitura[:5]
-        total_leitura_comparacao = total_leitura.values[:5]
-        total_escrita_comparacao = total_escrita.values
-        
-        x_pos = np.arange(len(categorias_comparacao))
-        
-        # Criar gráfico de comparação estilizado
-        bars1 = ax3.bar(x_pos - 0.2, total_leitura_comparacao, 0.4, label='📚 Leitura', 
-                       color=cores_sistema['destaque'], alpha=0.8, edgecolor='white', linewidth=1)
-        bars2 = ax3.bar(x_pos + 0.2, total_escrita_comparacao, 0.4, label='✍️ Escrita', 
-                       color=cores_sistema['accent'], alpha=0.8, edgecolor='white', linewidth=1)
-        
-        # Estilizar eixos e títulos
-        ax3.set_xlabel('Níveis de Desenvolvimento', fontsize=12, fontweight='bold', color=cores_sistema['primaria'])
-        ax3.set_ylabel('Quantidade de Alunos', fontsize=12, fontweight='bold', color=cores_sistema['primaria'])
-        ax3.set_title('Comparação Geral: Leitura vs Escrita', 
-                     fontsize=16, fontweight='bold', color=cores_sistema['primaria'], pad=20)
-        
-        # Configurar ticks
-        ax3.set_xticks(x_pos)
-        ax3.set_xticklabels(categorias_comparacao, fontsize=10)
-        ax3.tick_params(axis='y', labelsize=10)
-        
-        # Configurar legenda
-        ax3.legend(fontsize=11, frameon=True, fancybox=True, shadow=True)
-        
-        # Configurar grid
-        ax3.grid(True, alpha=0.3, linestyle='--', color=cores_sistema['secundaria'])
-        ax3.set_axisbelow(True)
-        
-        # Adicionar valores nas barras
-        for bars in [bars1, bars2]:
-            for bar in bars:
-                height = bar.get_height()
-                if height > 0:
-                    ax3.text(bar.get_x() + bar.get_width()/2., height + max(total_leitura_comparacao.max(), total_escrita_comparacao.max()) * 0.01,
-                            f'{int(height)}', ha='center', va='bottom', fontsize=9, fontweight='bold')
-        
-        # Configurar layout
-        plt.tight_layout()
-        
-        # Salvar gráfico
-        chart3_path = f"temp/comparacao_real_chart_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-        fig3.savefig(chart3_path, dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
-        plt.close(fig3)
-        
-        charts_data['comparacao_chart'] = {
-            'path': chart3_path,
-            'title': 'Comparação Geral: Leitura vs Escrita',
-            'description': 'Análise comparativa entre os níveis de leitura e escrita, permitindo identificar correlações e áreas que necessitam de atenção pedagógica específica.'
-        }
-        
-        # Gráfico 4: Resumo Estatístico (Novo - mais simples)
-        print("🔍 DEBUG: Gerando gráfico de resumo...")
-        fig4, ax4 = plt.subplots(figsize=(12, 8))
-        fig4.patch.set_facecolor('white')
-        
-        # Dados para o gráfico de resumo
-        categorias = ['Não Leitores', 'Leitores Fluentes', 'Pré-Silábicos', 'Ortográficos']
-        valores = [
-            total_leitura['nl'],
-            total_leitura['lcf'], 
-            total_escrita['p'],
-            total_escrita['o']
-        ]
-        cores_resumo = ['#e74c3c', '#2ecc71', '#f39c12', '#3498db']
-        
-        # Criar gráfico de barras horizontal
-        bars = ax4.barh(categorias, valores, color=cores_resumo, alpha=0.8, edgecolor='white', linewidth=1)
-        
-        # Estilizar
-        ax4.set_xlabel('Quantidade de Alunos', fontsize=12, fontweight='bold', color=cores_sistema['primaria'])
-        ax4.set_title('Resumo dos Principais Indicadores', fontsize=16, fontweight='bold', color=cores_sistema['primaria'], pad=20)
-        
-        # Adicionar valores nas barras
-        for i, (bar, valor) in enumerate(zip(bars, valores)):
-            if valor > 0:
-                ax4.text(bar.get_width() + max(valores) * 0.01, bar.get_y() + bar.get_height()/2,
-                        f'{int(valor)}', ha='left', va='center', fontsize=11, fontweight='bold')
-        
-        # Configurar grid
-        ax4.grid(True, alpha=0.3, linestyle='--', color=cores_sistema['secundaria'], axis='x')
-        ax4.set_axisbelow(True)
-        
-        # Configurar layout
-        plt.tight_layout()
-        
-        # Salvar gráfico
-        chart4_path = f"temp/resumo_real_chart_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-        fig4.savefig(chart4_path, dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
-        plt.close(fig4)
-        
-        charts_data['resumo_chart'] = {
-            'path': chart4_path,
-            'title': 'Resumo dos Principais Indicadores',
-            'description': 'Visão geral dos principais indicadores educacionais, destacando os pontos que necessitam de maior atenção pedagógica.'
-        }
-        
-        # Adicionar análises estatísticas
-        total_alunos_leitura = df_leitura['total alunos'].sum()
-        total_alunos_escrita = df_escrita['total alunos'].sum()
-        
-        charts_data['analises'] = {
-            'total_alunos_leitura': total_alunos_leitura,
-            'total_alunos_escrita': total_alunos_escrita,
-            'total_anos': len(df_leitura),
-            'media_leitura_nl': (total_leitura['nl'] / total_alunos_leitura * 100) if total_alunos_leitura > 0 else 0,
-            'media_leitura_lcf': (total_leitura['lcf'] / total_alunos_leitura * 100) if total_alunos_leitura > 0 else 0,
-            'media_escrita_p': (total_escrita['p'] / total_alunos_escrita * 100) if total_alunos_escrita > 0 else 0,
-            'media_escrita_o': (total_escrita['o'] / total_alunos_escrita * 100) if total_alunos_escrita > 0 else 0
-        }
-        
-        print(f"🔍 DEBUG: Gráficos gerados com sucesso! Total: {len(charts_data) - 1} gráficos")
-        
+
+        print(f"✅ Gráficos de período único gerados com sucesso!")
         return charts_data
         
     except Exception as e:
-        print(f"🔍 DEBUG: Erro na geração dos gráficos reais: {str(e)}")
+        print(f"❌ Erro na geração de gráficos de período único: {e}")
         import traceback
         traceback.print_exc()
-        raise Exception(f"Erro na geração dos gráficos reais: {str(e)}")
+        return {}
 
-def generate_charts(df: pd.DataFrame, quant_trimestre: int) -> Dict[str, Any]:
+# NO ARQUIVO utils.py
+# Substitua a sua função gerar_grafico_comparativo_periodos por esta:
+
+def gerar_grafico_comparativo_periodos(data_p1: Dict[str, Any], data_p2: Dict[str, Any], metrica: str, series_selecionadas: List[str], titulo_grafico: str, subtitulo_grafico: str) -> Dict[str, str]:
     """
-    Gera gráficos de barras comparativos e retorna dados para PDF (formato antigo)
-    
-    Args:
-        df: DataFrame com os dados
-        quant_trimestre: Quantidade de trimestres
-    
-    Returns:
-        Dicionário com gráficos e análises
+    Gera um gráfico de barras comparando NÚMEROS ABSOLUTOS de uma métrica 
+    específica entre dois períodos para um grupo de séries. (VERSÃO FINAL CORRIGIDA)
     """
     try:
-        charts_data = {}
+        # --- ETAPA DE PREPARAÇÃO DE DADOS (NOVA LÓGICA) ---
+
+        # 1. Define quais métricas pertencem a qual tabela
+        leitura_metrics = ['nl', 'ls', 'lp', 'lf', 'lsf', 'lcf']
+        escrita_metrics = ['p', 's', 's.a.', 'a', 'o']
+
+        # 2. Seleciona os DataFrames corretos (leitura ou escrita) baseado na métrica
+        if metrica in leitura_metrics:
+            df1 = data_p1['leitura']
+            df2 = data_p2['leitura']
+            print(f"🔍 DEBUG: Métrica '{metrica}' encontrada na tabela de LEITURA.")
+        elif metrica in escrita_metrics:
+            df1 = data_p1['escrita']
+            df2 = data_p2['escrita']
+            print(f"🔍 DEBUG: Métrica '{metrica}' encontrada na tabela de ESCRITA.")
+        else:
+            raise ValueError(f"Métrica '{metrica}' desconhecida.")
+
+        # 3. Junta os dados dos dois períodos de forma simples e direta
+        df_merged = pd.merge(
+            df1[['ano', 'total alunos', metrica]],
+            df2[['ano', 'total alunos', metrica]],
+            on='ano',
+            suffixes=('_p1', '_p2'),
+            how='inner'
+        )
+
+        # 4. Filtra pelas séries desejadas (agora sobre um DataFrame limpo)
+        df_final = df_merged[df_merged['ano'].isin(series_selecionadas)].reset_index(drop=True)
+
+        if df_final.empty:
+            print(f"⚠️ Aviso: Nenhum dado encontrado para as séries {series_selecionadas} na métrica '{metrica}'. Pulando gráfico.")
+            return {}
+
+        # 5. Prepara os dados para plotagem (VOLTANDO PARA NÚMEROS ABSOLUTOS)
+        categorias = [f"{row['ano']}\nTotal: {int(row['total alunos_p1'])} - {int(row['total alunos_p2'])}" for index, row in df_final.iterrows()]
+        valores_1periodo = df_final[f'{metrica}_p1']
+        valores_2periodo = df_final[f'{metrica}_p2']
+
+        # --- O CÓDIGO DE ESTILIZAÇÃO DO GRÁFICO ---
+
+        fig, ax = plt.subplots(figsize=(12, 7))
+        fig.patch.set_facecolor('white')
+
+        x = np.arange(len(categorias))
+        width = 0.35
+        cor_2periodo = '#fdd835'
         
-        # Gráfico 1: Níveis de Leitura por Escola
-        fig1, ax1 = plt.subplots(figsize=(12, 8))
+        bars1 = ax.bar(x - width/2, valores_1periodo, width, color='#02984c', label='1º Período', edgecolor='white', linewidth=1)
+        bars2 = ax.bar(x + width/2, valores_2periodo, width, color=cor_2periodo, label='2º Período', edgecolor='white', linewidth=1)
+
+        # RÓTULO VOLTOU A SER NÚMERO INTEIRO
+        def autolabel(bars):
+            for bar in bars:
+                height = bar.get_height()
+                if height > 0:
+                    ax.text(bar.get_x() + bar.get_width()/2.0, height, f'{int(height)}',
+                            ha='center', va='bottom', fontsize=10, fontweight='bold')
         
-        # Preparar dados para leitura
-        leitura_data = []
-        escolas = df['Nome da escola'].unique()
+        autolabel(bars1)
+        autolabel(bars2)
+
+        ax.set_title('')
+        ax.set_xlabel('')
+        ax.set_ylabel('')
+        ax.set_xticks(x)
+        ax.set_xticklabels(categorias, rotation=0, ha='center', fontsize=10)
         
-        for escola in escolas:
-            escola_data = df[df['Nome da escola'] == escola]
-            leitura_stats = escola_data['Niveis de Leitura'].value_counts()
-            
-            leitura_data.append({
-                'Escola': escola,
-                'Baixo': leitura_stats.get('Baixo', 0),
-                'Médio': leitura_stats.get('Médio', 0),
-                'Alto': leitura_stats.get('Alto', 0)
-            })
+        # EIXO Y VOLTOU A SER DINÂMICO
+        max_value = max(max(valores_1periodo, default=0), max(valores_2periodo, default=0))
+        ax.set_ylim(0, max_value * 1.25 if max_value > 0 else 10) # Define um mínimo de 10 se não houver dados
+
+        ax.grid(True, alpha=0.5, linestyle='-', axis='y', color='lightgray')
+        ax.set_axisbelow(True)
         
-        leitura_df = pd.DataFrame(leitura_data)
-        
-        # Criar gráfico de barras empilhadas para leitura
-        x = np.arange(len(leitura_df))
-        width = 0.25
-        
-        ax1.bar(x - width, leitura_df['Baixo'], width, label='Baixo', color='#ff6b6b')
-        ax1.bar(x, leitura_df['Médio'], width, label='Médio', color='#4ecdc4')
-        ax1.bar(x + width, leitura_df['Alto'], width, label='Alto', color='#45b7d1')
-        
-        ax1.set_xlabel('Escolas')
-        ax1.set_ylabel('Quantidade de Alunos')
-        ax1.set_title(f'Diagnóstico de Leitura - {quant_trimestre}º Trimestre')
-        ax1.set_xticks(x)
-        ax1.set_xticklabels(leitura_df['Escola'], rotation=45, ha='right')
-        ax1.legend()
-        ax1.grid(True, alpha=0.3)
-        
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.spines['left'].set_visible(False)
+        ax.spines['bottom'].set_color('lightgray')
+
+        ax.legend(loc='upper right', frameon=False, fontsize=10)
         plt.tight_layout()
+
+        os.makedirs("temp", exist_ok=True)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        chart_path = f"temp/grafico_{metrica}_{'_'.join(series_selecionadas).replace(' ','')}_{timestamp}.png"
+        fig.savefig(chart_path, dpi=300, bbox_inches='tight', facecolor='white')
+        plt.close(fig)
+
+        print(f"✅ Gráfico de NÚMEROS ABSOLUTOS '{titulo_grafico}' salvo em: {chart_path}")
         
-        # Salvar gráfico
-        chart1_path = f"temp/leitura_chart_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-        fig1.savefig(chart1_path, dpi=300, bbox_inches='tight')
-        plt.close(fig1)
-        
-        charts_data['leitura_chart'] = {
-            'path': chart1_path,
-            'title': f'Diagnóstico de Leitura - {quant_trimestre}º Trimestre',
-            'description': f'Gráfico mostrando a distribuição dos níveis de leitura por escola. Total de {len(escolas)} escolas analisadas.'
+        return {
+            'path': chart_path,
+            'title': titulo_grafico,
+            'description': subtitulo_grafico
         }
-        
-        # Gráfico 2: Níveis de Escrita por Escola
-        fig2, ax2 = plt.subplots(figsize=(12, 8))
-        
-        # Preparar dados para escrita
-        escrita_data = []
-        
-        for escola in escolas:
-            escola_data = df[df['Nome da escola'] == escola]
-            escrita_stats = escola_data['Niveis de Escrita'].value_counts()
-            
-            escrita_data.append({
-                'Escola': escola,
-                'Baixo': escrita_stats.get('Baixo', 0),
-                'Médio': escrita_stats.get('Médio', 0),
-                'Alto': escrita_stats.get('Alto', 0)
-            })
-        
-        escrita_df = pd.DataFrame(escrita_data)
-        
-        # Criar gráfico de barras empilhadas para escrita
-        ax2.bar(x - width, escrita_df['Baixo'], width, label='Baixo', color='#ff6b6b')
-        ax2.bar(x, escrita_df['Médio'], width, label='Médio', color='#4ecdc4')
-        ax2.bar(x + width, escrita_df['Alto'], width, label='Alto', color='#45b7d1')
-        
-        ax2.set_xlabel('Escolas')
-        ax2.set_ylabel('Quantidade de Alunos')
-        ax2.set_title(f'Diagnóstico de Escrita - {quant_trimestre}º Trimestre')
-        ax2.set_xticks(x)
-        ax2.set_xticklabels(escrita_df['Escola'], rotation=45, ha='right')
-        ax2.legend()
-        ax2.grid(True, alpha=0.3)
-        
-        plt.tight_layout()
-        
-        # Salvar gráfico
-        chart2_path = f"temp/escrita_chart_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-        fig2.savefig(chart2_path, dpi=300, bbox_inches='tight')
-        plt.close(fig2)
-        
-        charts_data['escrita_chart'] = {
-            'path': chart2_path,
-            'title': f'Diagnóstico de Escrita - {quant_trimestre}º Trimestre',
-            'description': f'Gráfico mostrando a distribuição dos níveis de escrita por escola. Total de {len(escolas)} escolas analisadas.'
-        }
-        
-        # Gráfico 3: Comparação Geral Leitura vs Escrita
-        fig3, ax3 = plt.subplots(figsize=(10, 6))
-        
-        # Calcular totais gerais
-        total_leitura = df['Niveis de Leitura'].value_counts()
-        total_escrita = df['Niveis de Escrita'].value_counts()
-        
-        categorias = ['Baixo', 'Médio', 'Alto']
-        x_pos = np.arange(len(categorias))
-        
-        ax3.bar(x_pos - 0.2, [total_leitura.get('Baixo', 0), total_leitura.get('Médio', 0), total_leitura.get('Alto', 0)], 
-                0.4, label='Leitura', color='#1abc9c')
-        ax3.bar(x_pos + 0.2, [total_escrita.get('Baixo', 0), total_escrita.get('Médio', 0), total_escrita.get('Alto', 0)], 
-                0.4, label='Escrita', color='#3498db')
-        
-        ax3.set_xlabel('Níveis')
-        ax3.set_ylabel('Quantidade de Alunos')
-        ax3.set_title('Comparação Geral: Leitura vs Escrita')
-        ax3.set_xticks(x_pos)
-        ax3.set_xticklabels(categorias)
-        ax3.legend()
-        ax3.grid(True, alpha=0.3)
-        
-        plt.tight_layout()
-        
-        # Salvar gráfico
-        chart3_path = f"temp/comparacao_chart_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-        fig3.savefig(chart3_path, dpi=300, bbox_inches='tight')
-        plt.close(fig3)
-        
-        charts_data['comparacao_chart'] = {
-            'path': chart3_path,
-            'title': 'Comparação Geral: Leitura vs Escrita',
-            'description': 'Comparação direta entre os níveis de leitura e escrita em todas as escolas.'
-        }
-        
-        # Gráfico 4: Distribuição por Modalidade
-        fig4, ax4 = plt.subplots(figsize=(10, 6))
-        
-        modalidade_stats = df['Modalidade'].value_counts()
-        
-        ax4.pie(modalidade_stats.values, labels=modalidade_stats.index, autopct='%1.1f%%', 
-                startangle=90, colors=['#e74c3c', '#3498db', '#2ecc71', '#f39c12'])
-        ax4.set_title('Distribuição por Modalidade')
-        
-        plt.tight_layout()
-        
-        # Salvar gráfico
-        chart4_path = f"temp/modalidade_chart_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-        fig4.savefig(chart4_path, dpi=300, bbox_inches='tight')
-        plt.close(fig4)
-        
-        charts_data['modalidade_chart'] = {
-            'path': chart4_path,
-            'title': 'Distribuição por Modalidade',
-            'description': f'Distribuição dos alunos por modalidade de ensino. Total de {len(df)} alunos analisados.'
-        }
-        
-        # Adicionar análises estatísticas
-        charts_data['analises'] = {
-            'total_alunos': len(df),
-            'total_escolas': len(escolas),
-            'media_leitura_alto': (total_leitura.get('Alto', 0) / len(df) * 100),
-            'media_escrita_alto': (total_escrita.get('Alto', 0) / len(df) * 100),
-            'media_leitura_baixo': (total_leitura.get('Baixo', 0) / len(df) * 100),
-            'media_escrita_baixo': (total_escrita.get('Baixo', 0) / len(df) * 100)
-        }
-        
-        return charts_data
-        
     except Exception as e:
-        raise Exception(f"Erro na geração dos gráficos: {str(e)}")
+        print(f"❌ Erro ao gerar gráfico para métrica '{metrica}': {e}")
+        import traceback
+        traceback.print_exc()
+        return {}
 
 def create_pdf_report(charts_data: Dict[str, Any], quant_trimestre: int) -> str:
     """
@@ -1315,6 +1043,12 @@ def create_pdf_report(charts_data: Dict[str, Any], quant_trimestre: int) -> str:
         for chart_key, chart_info in charts_data.items():
             if chart_key == 'analises':
                 continue
+
+            if not chart_info: # Checa se o dicionário do gráfico está vazio
+                print(f"⚠️ Aviso: Informações do gráfico para '{chart_key}' estão vazias. Pulando no PDF.")
+                continue
+
+            chart_count += 1
                 
             chart_count += 1
             print(f"🔍 DEBUG: Processando gráfico {chart_count}: {chart_key}")
