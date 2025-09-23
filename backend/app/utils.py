@@ -704,75 +704,85 @@ def process_excel_file(df: pd.DataFrame, polo: str) -> pd.DataFrame:
     except Exception as e:
         raise Exception(f"Erro no processamento da planilha: {str(e)}")
 
-def generate_charts_real(data: Dict[str, Any], quant_trimestre: int) -> Dict[str, Any]:
+def gerar_grafico_de_periodo_unico(data_p1: Dict[str, Any], series_selecionadas: List[str], metrica: str, titulo_grafico: str, subtitulo_grafico: str) -> Dict[str, str]:
     """
-    Gera gráficos estilizados para um único período, com o novo padrão visual.
+    Gera um gráfico de barras segmentado para um único período, com o novo estilo visual.
     """
     try:
-        print(f"🔍 DEBUG: Gerando gráficos de período único para {quant_trimestre}º trimestre")
-        charts_data = {}
-        df_leitura = data['leitura']
-        df_escrita = data['escrita']
-        os.makedirs("temp", exist_ok=True)
-
-        # Gráfico 1: Níveis de Leitura (empilhado)
-        fig1, ax1 = plt.subplots(figsize=(14, 8))
-        fig1.patch.set_facecolor('white')
         leitura_metrics = ['nl', 'ls', 'lp', 'lf', 'lsf', 'lcf']
-        leitura_labels = ['NL', 'LS', 'LP', 'LF', 'LSF', 'LCF']
-        bottom = np.zeros(len(df_leitura))
-        for i, metric in enumerate(leitura_metrics):
-            ax1.bar(df_leitura['ano'], df_leitura[metric], label=leitura_labels[i], bottom=bottom, edgecolor='white', linewidth=0.5)
-            bottom += df_leitura[metric].values
-        
-        ax1.set_title(f'Diagnóstico de Leitura - {quant_trimestre}º Trimestre', fontweight='bold', fontsize=14)
-        ax1.set_xlabel('')
-        ax1.set_ylabel('')
-        ax1.tick_params(axis='x', rotation=45)
-        ax1.grid(True, alpha=0.5, linestyle='-', axis='y', color='lightgray')
-        ax1.set_axisbelow(True)
-        ax1.spines['top'].set_visible(False)
-        ax1.spines['right'].set_visible(False)
-        ax1.spines['left'].set_visible(False)
-        ax1.spines['bottom'].set_color('lightgray')
-        ax1.legend(loc='upper right', frameon=False, fontsize=10, ncol=len(leitura_metrics))
-        plt.tight_layout()
-        chart1_path = f"temp/leitura_periodo_unico_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-        fig1.savefig(chart1_path, dpi=300, bbox_inches='tight', facecolor='white')
-        plt.close(fig1)
-        charts_data['leitura_chart'] = {'path': chart1_path, 'title': f'Diagnóstico de Leitura', 'description': 'Distribuição dos níveis de leitura por ano/série para o período.'}
-
-        # Gráfico 2: Níveis de Escrita (empilhado)
-        fig2, ax2 = plt.subplots(figsize=(14, 8))
-        fig2.patch.set_facecolor('white')
         escrita_metrics = ['p', 's', 's.a.', 'a', 'o']
-        escrita_labels = ['P', 'S', 'S.A.', 'A', 'O']
-        bottom = np.zeros(len(df_escrita))
-        for i, metric in enumerate(escrita_metrics):
-            ax2.bar(df_escrita['ano'], df_escrita[metric], label=escrita_labels[i], bottom=bottom, edgecolor='white', linewidth=0.5)
-            bottom += df_escrita[metric].values
 
-        ax2.set_title(f'Diagnóstico de Escrita - {quant_trimestre}º Trimestre', fontweight='bold', fontsize=14)
-        ax2.set_xlabel('')
-        ax2.set_ylabel('')
-        ax2.tick_params(axis='x', rotation=45)
-        ax2.grid(True, alpha=0.5, linestyle='-', axis='y', color='lightgray')
-        ax2.set_axisbelow(True)
-        ax2.spines['top'].set_visible(False)
-        ax2.spines['right'].set_visible(False)
-        ax2.spines['left'].set_visible(False)
-        ax2.spines['bottom'].set_color('lightgray')
-        ax2.legend(loc='upper right', frameon=False, fontsize=10, ncol=len(escrita_metrics))
-        plt.tight_layout()
-        chart2_path = f"temp/escrita_periodo_unico_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-        fig2.savefig(chart2_path, dpi=300, bbox_inches='tight', facecolor='white')
-        plt.close(fig2)
-        charts_data['escrita_chart'] = {'path': chart2_path, 'title': f'Diagnóstico de Escrita', 'description': 'Distribuição dos níveis de escrita por ano/série para o período.'}
+        # Seleciona o DataFrame correto (leitura ou escrita)
+        if metrica in leitura_metrics:
+            df = data_p1['leitura']
+        elif metrica in escrita_metrics:
+            df = data_p1['escrita']
+        else:
+            raise ValueError(f"Métrica '{metrica}' desconhecida.")
+
+        # Filtra pelas séries desejadas
+        df_final = df[df['ano'].isin(series_selecionadas)].reset_index(drop=True)
+
+        if df_final.empty:
+            print(f"⚠️ Aviso: Nenhum dado encontrado para as séries {series_selecionadas} na métrica '{metrica}'.")
+            return {}
+
+        # Prepara os dados para plotagem
+        categorias = [f"{row['ano']}\nTotal: {int(row['total alunos'])}" for _, row in df_final.iterrows()]
+        valores_periodo = df_final[metrica]
+
+        # --- CÓDIGO DE ESTILIZAÇÃO (baseado no gráfico comparativo) ---
+        fig, ax = plt.subplots(figsize=(12, 7))
+        fig.patch.set_facecolor('white')
+        x = np.arange(len(categorias))
+        width = 0.45 # Barras um pouco mais largas
+
+        # Desenha apenas as barras do 1º período (verdes)
+        bars1 = ax.bar(x, valores_periodo, width, color='#02984c', edgecolor='white', linewidth=1)
+
+        def autolabel(bars):
+            for bar in bars:
+                height = bar.get_height()
+                if height > 0:
+                    ax.text(bar.get_x() + bar.get_width()/2.0, height, f'{int(height)}',
+                            ha='center', va='bottom', fontsize=10, fontweight='bold')
         
-        print(f"✅ Gráficos de período único gerados com sucesso!")
-        return charts_data
+        autolabel(bars1)
+
+        # Configurações visuais
+        ax.set_title('')
+        ax.set_xlabel('')
+        ax.set_ylabel('')
+        ax.set_xticks(x)
+        ax.set_xticklabels(categorias, rotation=0, ha='center', fontsize=10)
+        
+        max_value = max(valores_periodo, default=0)
+        ax.set_ylim(0, max_value * 1.25 if max_value > 0 else 10)
+
+        ax.grid(True, alpha=0.5, linestyle='-', axis='y', color='lightgray')
+        ax.set_axisbelow(True)
+        
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.spines['left'].set_visible(False)
+        ax.spines['bottom'].set_color('lightgray')
+
+        plt.tight_layout()
+
+        # Salva o arquivo
+        os.makedirs("temp", exist_ok=True)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        chart_path = f"temp/grafico_unico_{metrica}_{''.join(series_selecionadas)}_{timestamp}.png"
+        fig.savefig(chart_path, dpi=300, bbox_inches='tight', facecolor='white')
+        plt.close(fig)
+
+        print(f"✅ Gráfico de período único '{titulo_grafico}' salvo em: {chart_path}")
+        
+        return { 'path': chart_path, 'title': titulo_grafico, 'description': subtitulo_grafico }
     except Exception as e:
-        print(f"❌ Erro na geração de gráficos de período único: {e}")
+        print(f"❌ Erro ao gerar gráfico de período único para métrica '{metrica}': {e}")
+        import traceback
+        traceback.print_exc()
         return {}
 
 

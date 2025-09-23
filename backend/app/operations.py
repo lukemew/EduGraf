@@ -10,7 +10,7 @@ import io
 from app.utils import (
     process_excel_file_real,
     process_excel_file,
-    generate_charts_real,
+    gerar_grafico_de_periodo_unico,
     create_pdf_report,
     debug_dataframe_sections,
     aplicar_formatacao_excel
@@ -81,7 +81,7 @@ class Operations:
         """
         try:
             print(f"📈 Gerando gráficos para o {trimestre}º trimestre")
-            from app.utils import generate_charts_real, gerar_grafico_comparativo_periodos, create_pdf_report
+            from app.utils import gerar_grafico_de_periodo_unico, gerar_grafico_comparativo_periodos, create_pdf_report
 
             charts_data = {}
             polo_nome = "Geral" # O polo é sempre geral para os gráficos
@@ -94,11 +94,35 @@ class Operations:
                 contents = await files[0].read()
                 df = pd.read_excel(io.BytesIO(contents), header=None)
                 processed_data = process_excel_file_real(df, polo_nome)
-                
-                # Calcula o total de alunos
                 total_alunos_p1 = processed_data['leitura']['total alunos'].sum()
+
+                anos_fund1 = ['1°', '2°', '3°', '4°', '5°', 'EJA SEG I'] 
+                anos_fund2 = ['6°', '7°', '8°', '9°', 'EJA SEG II']    
                 
-                charts_data = generate_charts_real(processed_data, trimestre)
+                # --- Geração de todos os gráficos via loop ---
+
+                # Lista de métricas de leitura e seus nomes
+                metricas_leitura = {
+                    'nl': 'Não Leitores (NL)', 'ls': 'Leitores de sílabas (LS)', 'lp': 'Leitores de palavras (LP)',
+                    'lf': 'Leitores de frases (LF)', 'lsf': 'Leitores sem fluência (LSF)', 'lcf': 'Leitores com fluência (LCF)'
+                }
+
+                # Lista de métricas de escrita e seus nomes
+                metricas_escrita = {
+                    'p': 'Pré-silábicos (P)', 's': 'Silábicos (S)', 's.a.': 'Silábicos alfabéticos (S.A.)',
+                    'a': 'Alfabéticos (A)', 'o': 'Ortográficos (O)'
+                }
+
+                # Loop para gerar todos os gráficos de Leitura
+                for metrica, nome in metricas_leitura.items():
+                    charts_data[f'{metrica}_fund1'] = gerar_grafico_de_periodo_unico(data_p1=processed_data, series_selecionadas=anos_fund1, metrica=metrica, titulo_grafico=f'Alunos {nome}', subtitulo_grafico='Segmento: Fundamental I (1º ao 5º ano e EJA I)')
+                    charts_data[f'{metrica}_fund2'] = gerar_grafico_de_periodo_unico(data_p1=processed_data, series_selecionadas=anos_fund2, metrica=metrica, titulo_grafico=f'Alunos {nome}', subtitulo_grafico='Segmento: Fundamental II (6º ao 9º ano e EJA II)')
+
+                # Loop para gerar todos os gráficos de Escrita
+                for metrica, nome in metricas_escrita.items():
+                    charts_data[f'{metrica}_fund1'] = gerar_grafico_de_periodo_unico(data_p1=processed_data, series_selecionadas=anos_fund1, metrica=metrica, titulo_grafico=f'Alunos {nome}', subtitulo_grafico='Segmento: Fundamental I (1º ao 5º ano e EJA I)')
+                    charts_data[f'{metrica}_fund2'] = gerar_grafico_de_periodo_unico(data_p1=processed_data, series_selecionadas=anos_fund2, metrica=metrica, titulo_grafico=f'Alunos {nome}', subtitulo_grafico='Segmento: Fundamental II (6º ao 9º ano e EJA II)')
+
 
             # --- CENÁRIO 2: GRÁFICO COMPARATIVO ---
             elif len(files) == 2:
@@ -118,8 +142,8 @@ class Operations:
                 total_alunos_p2 = processed_data_p2['leitura']['total alunos'].sum()
 
                 # Define os grupos de séries
-                anos_fund1 = ['1°', '2°', '3°', '4°', '5°', 'EJA SEG I'] # <-- ALTERAÇÃO AQUI
-                anos_fund2 = ['6°', '7°', '8°', '9°', 'EJA SEG II']    # <-- ALTERAÇÃO AQUI
+                anos_fund1 = ['1°', '2°', '3°', '4°', '5°', 'EJA SEG I'] 
+                anos_fund2 = ['6°', '7°', '8°', '9°', 'EJA SEG II']    
 
                 # Não Leitor (NL)
                 charts_data['nl_fund1'] = gerar_grafico_comparativo_periodos(data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='nl', series_selecionadas=anos_fund1, titulo_grafico='Comparativo de Alunos Não Leitores (NL)', subtitulo_grafico='Segmento: Fundamental I (1º ao 5º ano e EJA I)')
