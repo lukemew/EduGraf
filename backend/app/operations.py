@@ -84,71 +84,95 @@ class Operations:
             from app.utils import generate_charts_real, gerar_grafico_comparativo_periodos, create_pdf_report
 
             charts_data = {}
+            polo_nome = "Geral" # O polo é sempre geral para os gráficos
+            total_alunos_p1 = 0
+            total_alunos_p2 = None # Inicia como None para o caso de ter só 1 arquivo
 
             # --- CENÁRIO 1: GRÁFICO DE PERÍODO ÚNICO ---
             if len(files) == 1:
                 print("📄 Detectado 1 arquivo. Gerando gráficos de período único.")
                 contents = await files[0].read()
                 df = pd.read_excel(io.BytesIO(contents), header=None)
-                processed_data = process_excel_file_real(df, "Geral")
+                processed_data = process_excel_file_real(df, polo_nome)
                 
-                # Chama a função antiga que gera vários gráficos para um único período
+                # Calcula o total de alunos
+                total_alunos_p1 = processed_data['leitura']['total alunos'].sum()
+                
                 charts_data = generate_charts_real(processed_data, trimestre)
 
             # --- CENÁRIO 2: GRÁFICO COMPARATIVO ---
             elif len(files) == 2:
                 print("📄 Detectados 2 arquivos. Gerando gráficos comparativos por segmento.")
+                # Processa Período 1
                 contents_p1 = await files[0].read()
                 df_p1 = pd.read_excel(io.BytesIO(contents_p1), header=None)
-                processed_data_p1 = process_excel_file_real(df_p1, "Geral")
+                processed_data_p1 = process_excel_file_real(df_p1, polo_nome)
                 
+                # Processa Período 2
                 contents_p2 = await files[1].read()
                 df_p2 = pd.read_excel(io.BytesIO(contents_p2), header=None)
-                processed_data_p2 = process_excel_file_real(df_p2, "Geral")
+                processed_data_p2 = process_excel_file_real(df_p2, polo_nome)
+
+                # Calcula os totais de alunos de cada período
+                total_alunos_p1 = processed_data_p1['leitura']['total alunos'].sum()
+                total_alunos_p2 = processed_data_p2['leitura']['total alunos'].sum()
 
                 # Define os grupos de séries
                 anos_fund1 = ['1°', '2°', '3°', '4°', '5°', 'EJA SEG I'] # <-- ALTERAÇÃO AQUI
                 anos_fund2 = ['6°', '7°', '8°', '9°', 'EJA SEG II']    # <-- ALTERAÇÃO AQUI
 
-                # --- Gera os 4 gráficos solicitados ---
+                # Não Leitor (NL)
+                charts_data['nl_fund1'] = gerar_grafico_comparativo_periodos(data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='nl', series_selecionadas=anos_fund1, titulo_grafico='Comparativo de Alunos Não Leitores (NL)', subtitulo_grafico='Segmento: Fundamental I (1º ao 5º ano e EJA I)')
+                charts_data['nl_fund2'] = gerar_grafico_comparativo_periodos(data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='nl', series_selecionadas=anos_fund2, titulo_grafico='Comparativo de Alunos Não Leitores (NL)', subtitulo_grafico='Segmento: Fundamental II (6º ao 9º ano e EJA II)')
 
-                # Gráfico 1: NL - Fund. I
-                charts_data['nl_fund1'] = gerar_grafico_comparativo_periodos(
-                    data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='nl',
-                    series_selecionadas=anos_fund1,
-                    titulo_grafico='Comparativo de Alunos Não Leitores (NL)',
-                    subtitulo_grafico='Segmento: Fundamental I (1º ao 5º ano e EJA I)'
-                )
-                
-                # Gráfico 2: NL - Fund. II
-                charts_data['nl_fund2'] = gerar_grafico_comparativo_periodos(
-                    data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='nl',
-                    series_selecionadas=anos_fund2,
-                    titulo_grafico='Comparativo de Alunos Não Leitores (NL)',
-                    subtitulo_grafico='Segmento: Fundamental II (6º ao 9º ano e EJA II)'
-                )
+                # Leitor de Sílabas (LS)
+                charts_data['ls_fund1'] = gerar_grafico_comparativo_periodos(data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='ls', series_selecionadas=anos_fund1, titulo_grafico='Comparativo de Alunos Leitores de sílabas (LS)', subtitulo_grafico='Segmento: Fundamental I (1º ao 5º ano e EJA I)')
+                charts_data['ls_fund2'] = gerar_grafico_comparativo_periodos(data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='ls', series_selecionadas=anos_fund2, titulo_grafico='Comparativo de Alunos Leitores de sílabas (LS)', subtitulo_grafico='Segmento: Fundamental II (6º ao 9º ano e EJA II)')
 
-                # Gráfico 3: P - Fund. I
-                charts_data['p_fund1'] = gerar_grafico_comparativo_periodos(
-                    data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='p',
-                    series_selecionadas=anos_fund1,
-                    titulo_grafico='Comparativo de Alunos Pré-Silábicos (P)',
-                    subtitulo_grafico='Segmento: Fundamental I (1º ao 5º ano e EJA I)'
-                )
+                # Leitor de Palavras (LP)
+                charts_data['lp_fund1'] = gerar_grafico_comparativo_periodos(data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='lp', series_selecionadas=anos_fund1, titulo_grafico='Comparativo de Alunos Leitores de palavras (LP)', subtitulo_grafico='Segmento: Fundamental I (1º ao 5º ano e EJA I)')
+                charts_data['lp_fund2'] = gerar_grafico_comparativo_periodos(data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='lp', series_selecionadas=anos_fund2, titulo_grafico='Comparativo de Alunos Leitores de palavras (LP)', subtitulo_grafico='Segmento: Fundamental II (6º ao 9º ano e EJA II)')   
 
-                # Gráfico 4: P - Fund. II
-                charts_data['p_fund2'] = gerar_grafico_comparativo_periodos(
-                    data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='p',
-                    series_selecionadas=anos_fund2,
-                    titulo_grafico='Comparativo de Alunos Pré-Silábicos (P)',
-                    subtitulo_grafico='Segmento: Fundamental II (6º ao 9º ano e EJA II)'
-                )
+                # Leitor de Frases (LF)
+                charts_data['lf_fund1'] = gerar_grafico_comparativo_periodos(data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='lf', series_selecionadas=anos_fund1, titulo_grafico='Comparativo de Alunos Leitores de frases (LF)', subtitulo_grafico='Segmento: Fundamental I (1º ao 5º ano e EJA I)')
+                charts_data['lf_fund2'] = gerar_grafico_comparativo_periodos(data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='lf', series_selecionadas=anos_fund2, titulo_grafico='Comparativo de Alunos Leitores de frases (LF)', subtitulo_grafico='Segmento: Fundamental II (6º ao 9º ano e EJA II)')   
+
+                # Leitor sem Fluência (LSF)
+                charts_data['lsf_fund1'] = gerar_grafico_comparativo_periodos(data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='lsf', series_selecionadas=anos_fund1, titulo_grafico='Comparativo de Alunos Leitores sem fluência (LSF)', subtitulo_grafico='Segmento: Fundamental I (1º ao 5º ano e EJA I)')
+                charts_data['lsf_fund2'] = gerar_grafico_comparativo_periodos(data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='lsf', series_selecionadas=anos_fund2, titulo_grafico='Comparativo de Alunos Leitores sem fluência (LSF)', subtitulo_grafico='Segmento: Fundamental II (6º ao 9º ano e EJA II)')   
+
+                # Leitor com Fluência (LCF)
+                charts_data['lcf_fund1'] = gerar_grafico_comparativo_periodos(data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='lcf', series_selecionadas=anos_fund1, titulo_grafico='Comparativo de Alunos Leitores com fluência (LCF)', subtitulo_grafico='Segmento: Fundamental I (1º ao 5º ano e EJA I)')
+                charts_data['lcf_fund2'] = gerar_grafico_comparativo_periodos(data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='lcf', series_selecionadas=anos_fund2, titulo_grafico='Comparativo de Alunos Leitores com fluência (LCF)', subtitulo_grafico='Segmento: Fundamental II (6º ao 9º ano e EJA II)')   
+
+                # Pré-silábicos (P)
+                charts_data['p_fund1'] = gerar_grafico_comparativo_periodos(data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='p', series_selecionadas=anos_fund1, titulo_grafico='Comparativo de Alunos Pré-Silábicos (P)', subtitulo_grafico='Segmento: Fundamental I (1º ao 5º ano e EJA I)')
+                charts_data['p_fund2'] = gerar_grafico_comparativo_periodos(data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='p', series_selecionadas=anos_fund2, titulo_grafico='Comparativo de Alunos Pré-Silábicos (P)', subtitulo_grafico='Segmento: Fundamental II (6º ao 9º ano e EJA II)')
+
+                # Silábicos (S)
+                charts_data['s_fund1'] = gerar_grafico_comparativo_periodos(data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='s', series_selecionadas=anos_fund1, titulo_grafico='Comparativo de Alunos silábicos (S)', subtitulo_grafico='Segmento: Fundamental I (1º ao 5º ano e EJA I)')
+                charts_data['s_fund2'] = gerar_grafico_comparativo_periodos(data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='s', series_selecionadas=anos_fund2, titulo_grafico='Comparativo de Alunos silábicos (S)', subtitulo_grafico='Segmento: Fundamental II (6º ao 9º ano e EJA II)')
             
+                # Silábico Alfabético (S.A)
+                charts_data['s.a_fund1'] = gerar_grafico_comparativo_periodos(data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='s.a.', series_selecionadas=anos_fund1, titulo_grafico='Comparativo de Alunos silábicos alfabéticos (SA)', subtitulo_grafico='Segmento: Fundamental I (1º ao 5º ano e EJA I)')
+                charts_data['s.a_fund2'] = gerar_grafico_comparativo_periodos(data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='s.a.', series_selecionadas=anos_fund2, titulo_grafico='Comparativo de Alunos silábicos alfabéticos (SA)', subtitulo_grafico='Segmento: Fundamental II (6º ao 9º ano e EJA II)')
+            
+                # Alfabético (A)
+                charts_data['a_fund1'] = gerar_grafico_comparativo_periodos(data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='a', series_selecionadas=anos_fund1, titulo_grafico='Comparativo de Alunos alfabéticos (A)', subtitulo_grafico='Segmento: Fundamental I (1º ao 5º ano e EJA I)')
+                charts_data['a_fund2'] = gerar_grafico_comparativo_periodos(data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='a', series_selecionadas=anos_fund2, titulo_grafico='Comparativo de Alunos alfabéticos (A)', subtitulo_grafico='Segmento: Fundamental II (6º ao 9º ano e EJA II)')
+            
+                # Ortográficos (O)
+                charts_data['o_fund1'] = gerar_grafico_comparativo_periodos(data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='o', series_selecionadas=anos_fund1, titulo_grafico='Comparativo de Alunos ortográficos (O)', subtitulo_grafico='Segmento: Fundamental I (1º ao 5º ano e EJA I)')
+                charts_data['o_fund2'] = gerar_grafico_comparativo_periodos(data_p1=processed_data_p1, data_p2=processed_data_p2, metrica='o', series_selecionadas=anos_fund2, titulo_grafico='Comparativo de Alunos ortográficos (O)', subtitulo_grafico='Segmento: Fundamental II (6º ao 9º ano e EJA II)')
+            
+
+
             else:
                 raise ValueError("Número de arquivos inválido. Envie 1 ou 2 arquivos.")
 
             # --- Cria o relatório PDF com os gráficos gerados ---
-            pdf_path = create_pdf_report(charts_data, trimestre)
+            # CHAMADA CORRIGIDA: Agora passando todos os argumentos
+            pdf_path = create_pdf_report(charts_data, trimestre, polo_nome, total_alunos_p1, total_alunos_p2)
             
             print(f"✅ Relatório PDF gerado: {pdf_path}")
             return pdf_path
