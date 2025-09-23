@@ -38,7 +38,7 @@ const TabelasPage = () => {
     //    A chave 'polo' e 'file' devem ser as que seu backend espera receber
     formData.append("polo", selectedPolo);
     formData.append("file", selectedFile);
-    formData.append("tipo_processamento", "tabela");  // Forçar processamento como tabela
+    formData.append("tipo_processamento", "tabela"); // Forçar processamento como tabela
 
     console.log("🔍 DEBUG: Enviando para o backend:", {
       polo: selectedPolo,
@@ -101,10 +101,7 @@ const TabelasPage = () => {
         }
       }
 
-      showError(
-        "❌ Erro ao Gerar Tabela",
-        errorMessage
-      );
+      showError("❌ Erro ao Gerar Tabela", errorMessage);
     }
   };
 
@@ -133,7 +130,7 @@ const TabelasPage = () => {
             />
           </div>
         </div>
-
+        <h2>Exemplo de modelo da tabela:</h2>
         <img src={Tabela} alt="Pré visualização da tabela" />
       </main>
       <footer>

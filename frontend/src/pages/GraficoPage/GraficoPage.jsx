@@ -7,7 +7,6 @@ import Tips from "../../components/Tips/Tips";
 import { useNotificationContext } from "../../contexts/NotificationContext";
 import { useState } from "react";
 import axios from "axios";
-import Grafico from "../../assets/grafico-exemplo.png";
 
 const GraficoPage = () => {
   // ESTADO PRINCIPAL: controla quantos campos de upload aparecem (1 ou 2)
@@ -94,7 +93,7 @@ const GraficoPage = () => {
       <header>
         <Navbar />
       </header>
-      <main className="tabelas_container">
+      <main className="graficos_container">
         <h2>Gerar gráfico do Polo</h2>
         <div className="select_container--polo">
           <p>Selecione a quantidade de Períodos:</p>
@@ -118,7 +117,6 @@ const GraficoPage = () => {
             />
           </div>
         </div>
-        <img src={Grafico} alt="Pré visualização da tabela" />
       </main>
       <footer>
         <Tips pagina={3} />
