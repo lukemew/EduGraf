@@ -907,7 +907,11 @@ def create_pdf_report(charts_data: Dict[str, Any], quant_trimestre: int, polo: s
         story.append(Spacer(1, 1.5 * inch))
         story.append(Paragraph("RELATÓRIO DE LEITURA E ESCRITA", title_style))
         story.append(Spacer(1, 0.5 * inch))
-        story.append(Paragraph(f"ANÁLISE COMPARATIVA DO {quant_trimestre}º TRIMESTRE", subtitle_style))
+        if total_alunos_p2 is not None:
+            story.append(Paragraph(f"ANÁLISE DO 1º & 2º PERÍODO", subtitle_style))
+        else:
+            story.append(Paragraph(f"ANÁLISE DO {quant_trimestre}º PERÍODO", subtitle_style))
+
         story.append(Spacer(1, 1.5 * inch))
         story.append(Paragraph(f"<b>POLO:</b> {polo.upper()}", normal_style_center))
         story.append(Paragraph(f"<b>DATA DE EMISSÃO:</b> {datetime.now().strftime('%d/%m/%Y')}", normal_style_center))
