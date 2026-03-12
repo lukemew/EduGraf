@@ -61,7 +61,7 @@ const GraficoPage = () => {
 
     try {
       const response = await axios.post(
-        "http://localhost:8000/upload",
+        "https://edugraf-backend.onrender.com/upload",
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },

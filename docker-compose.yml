@@ -56,7 +56,7 @@ services:
       - /app/node_modules
     restart: unless-stopped
     environment:
-      - VITE_API_URL=http://localhost:8000
+      - VITE_API_URL=https://edugraf-backend.onrender.com
     depends_on:
       - backend
     networks:

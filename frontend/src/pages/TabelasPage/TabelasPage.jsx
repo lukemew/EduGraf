@@ -50,7 +50,7 @@ const TabelasPage = () => {
     try {
       // 3. Enviar a requisição (lógica de envio e download continua a mesma)
       const response = await axios.post(
-        "http://localhost:8000/upload",
+        "https://edugraf-backend.onrender.com/upload",
         formData,
         {
           headers: {
