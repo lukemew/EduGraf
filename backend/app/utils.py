@@ -774,7 +774,11 @@ def gerar_grafico_de_periodo_unico(data_p1: Dict[str, Any], series_selecionadas:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         chart_path = f"temp/grafico_unico_{metrica}_{''.join(series_selecionadas)}_{timestamp}.png"
         fig.savefig(chart_path, dpi=300, bbox_inches='tight', facecolor='white')
-        plt.close(fig)
+        
+        fig.clf()          # Limpa todos os eixos e textos da figura
+        plt.close('all')   # Força o fechamento de TODAS as janelas invisíveis
+        import gc          # Importa o Garbage Collector do Python
+        gc.collect()
 
         print(f"✅ Gráfico de período único '{titulo_grafico}' salvo em: {chart_path}")
         
@@ -853,7 +857,11 @@ def gerar_grafico_comparativo_periodos(data_p1: Dict[str, Any], data_p2: Dict[st
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         chart_path = f"temp/grafico_{metrica}_{''.join(series_selecionadas)}_{timestamp}.png"
         fig.savefig(chart_path, dpi=300, bbox_inches='tight', facecolor='white')
-        plt.close(fig)
+        
+        fig.clf()
+        plt.close('all')
+        import gc
+        gc.collect()
         
         return {'path': chart_path, 'title': titulo_grafico, 'description': subtitulo_grafico}
     except Exception as e:
