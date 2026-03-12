@@ -1,4 +1,5 @@
 import os
+import bcrypt
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -6,17 +7,15 @@ from fastapi import Depends, HTTPException, status, APIRouter
 from fastapi import Body
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-
-from .database import get_db, Base, engine
+from .database import get_db, Base, engine, AsyncSessionLocal
 from .models import User
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 JWT_SECRET = os.getenv("JWT_SECRET", "changeme")
@@ -25,11 +24,12 @@ JWT_EXPIRES_MINUTES = int(os.getenv("JWT_EXPIRES_MINUTES", "60"))
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
-
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+    return hashed.decode('utf-8')
 
 def verify_password(plain_password: str, password_hash: str) -> bool:
-    return pwd_context.verify(plain_password, password_hash)
+    return bcrypt.checkpw(plain_password.encode('utf-8'), password_hash.encode('utf-8'))
 
 
 def create_access_token(subject: str, expires_delta: Optional[timedelta] = None) -> str:
@@ -107,4 +107,30 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSessi
         "user": {"id": user.id, "name": user.name, "email": user.email},
     }
 
+async def create_default_admin():
+    """Cria um usuário administrador padrão se ele não existir"""
+    admin_email = os.getenv("ADMIN_EMAIL", "edugraf")
+    admin_password = os.getenv("ADMIN_PASSWORD", "senha123") # Fallback de emergência
 
+    async with AsyncSessionLocal() as db:
+        # Verifica se o admin já existe
+        result = await db.execute(select(User).where(User.email == admin_email))
+        user = result.scalar_one_or_none()
+
+        if user is None:
+            print(f"⚙️ Criando usuário administrador padrão: {admin_email}")
+            # Usa a sua função de hash já existente!
+            hashed_pw = hash_password(admin_password)
+            
+            # Cria o usuário
+            new_admin = User(
+                name="Administrador do Sistema", 
+                email=admin_email, 
+                password_hash=hashed_pw
+            )
+            
+            db.add(new_admin)
+            await db.commit()
+            print("✅ Administrador criado com sucesso!")
+        else:
+            print(f"👍 Administrador '{admin_email}' já existe no banco.")

@@ -14,7 +14,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  height: 70rem;
+  height: 75rem;
 }
 
 .tabelas_container h2 {
@@ -22,6 +22,6 @@
 }
 
 .tabelas_container img {
-  margin: 4rem;
+  margin: 2rem;
   height: 35rem;
 }

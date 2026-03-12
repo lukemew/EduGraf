@@ -6,9 +6,9 @@ from typing import List, Dict, Any
 import io
 import base64
 from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib.pagesizes import letter, A4, landscape
 from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, KeepTogether, PageBreak
+from reportlab.platypus import BaseDocTemplate, PageTemplate, Frame, NextPageTemplate, Paragraph, Spacer, Table, TableStyle, Image, KeepTogether, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 import os
@@ -862,7 +862,7 @@ def gerar_grafico_comparativo_periodos(data_p1: Dict[str, Any], data_p2: Dict[st
 
 def create_pdf_report(charts_data: Dict[str, Any], quant_trimestre: int, polo: str, total_alunos_p1: int, total_alunos_p2: int = None) -> str:
     """
-    Cria relatório PDF com página de rosto, gráficos e descrições das métricas.
+    Cria relatório PDF com página de rosto em Retrato e gráficos em Paisagem.
     """
     try:
         print(f"🔍 DEBUG: Iniciando criação do PDF para o {quant_trimestre}º trimestre")
@@ -871,8 +871,31 @@ def create_pdf_report(charts_data: Dict[str, Any], quant_trimestre: int, polo: s
         pdf_path = f"temp/relatorio_graficos_{quant_trimestre}_trimestre_{timestamp}.pdf"
         os.makedirs("temp", exist_ok=True)
 
-        doc = SimpleDocTemplate(pdf_path, pagesize=A4, rightMargin=50, leftMargin=50, topMargin=60, bottomMargin=60)
+        # 1. SETUP DO DOCUMENTO BASE (Começa como Retrato)
+        doc = BaseDocTemplate(
+            pdf_path, 
+            pagesize=A4, 
+            rightMargin=50, 
+            leftMargin=50, 
+            topMargin=50, 
+            bottomMargin=50
+        )
         
+        # 2. DEFINIÇÃO DOS TEMPLATES (Retrato e Paisagem)
+        # Template Retrato (Capa)
+        frame_portrait = Frame(doc.leftMargin, doc.bottomMargin, doc.width, doc.height, id='portrait_frame')
+        template_portrait = PageTemplate(id='Portrait', frames=frame_portrait, pagesize=A4)
+        
+        # Template Paisagem (Gráficos)
+        page_landscape = landscape(A4)
+        landscape_width = page_landscape[0] - doc.leftMargin - doc.rightMargin
+        landscape_height = page_landscape[1] - doc.topMargin - doc.bottomMargin
+        frame_landscape = Frame(doc.leftMargin, doc.bottomMargin, landscape_width, landscape_height, id='landscape_frame')
+        template_landscape = PageTemplate(id='Landscape', frames=frame_landscape, pagesize=page_landscape)
+        
+        # Adiciona ao documento (o primeiro da lista é o padrão)
+        doc.addPageTemplates([template_portrait, template_landscape])
+
         styles = getSampleStyleSheet()
         story = []
         
@@ -880,21 +903,16 @@ def create_pdf_report(charts_data: Dict[str, Any], quant_trimestre: int, polo: s
         title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=28, spaceAfter=25, alignment=1, textColor=colors.HexColor('#165b70'), fontName='Helvetica-Bold')
         subtitle_style = ParagraphStyle('CustomSubtitle', parent=styles['Heading2'], fontSize=18, spaceAfter=12, alignment=1, textColor=colors.HexColor('#3d626d'), fontName='Helvetica-Bold')
         normal_style_center = ParagraphStyle('CustomNormalCenter', parent=styles['Normal'], fontSize=12, spaceAfter=10, alignment=1, textColor=colors.HexColor('#333333'), fontName='Helvetica')
-        
-        # NOVO ESTILO: Para a descrição da métrica abaixo do gráfico
         caption_style = ParagraphStyle('CaptionStyle', parent=styles['Normal'], fontSize=10, alignment=1, textColor=colors.HexColor('#4a4a4a'), fontName='Helvetica-Oblique', leading=14)
 
-        # NOVO DICIONÁRIO: Com as descrições das métricas
+        # --- Dicionário de Descrições ---
         metric_descriptions = {
-            # --- Métricas de Leitura ---
             'nl': '<b>Não Leitor (NL):</b> Refere-se ao aluno que ainda não consegue ler palavras ou sílabas, demonstrando a necessidade de intervenções focadas na alfabetização básica.',
             'ls': '<b>Leitor Silábico (LS):</b> Descreve o aluno que já compreende a escrita em segmentos (sílabas), mas ainda lê de forma pausada, juntando as sílabas para formar a palavra.',
             'lp': '<b>Leitor de Palavra (LP):</b> Indica o aluno que lê palavras inteiras com certa fluidez, mas ainda de forma segmentada, sem conectar o ritmo e a entonação de uma frase completa.',
             'lf': '<b>Leitor de Frase (LF):</b> Corresponde ao aluno que lê frases completas com fluidez e entonação adequadas, demonstrando compreensão das unidades de sentido.',
             'lsf': '<b>Leitor Silábico com Fluência (LSF):</b> Etapa intermediária onde o aluno, embora ainda decodifique silabicamente, o faz com maior rapidez, iniciando a transição para a leitura de palavras.',
             'lcf': '<b>Leitor com Fluência (LCF):</b> Representa o aluno que lê textos de forma contínua, com ritmo, entonação e precisão, compreendendo o que foi lido. É o objetivo final da alfabetização em leitura.',
-
-            # --- Métricas de Escrita ---
             'p': '<b>Pré-Silábico (P):</b> Refere-se ao aluno que, na escrita, ainda não estabelece relação entre os sons da fala e as letras, utilizando grafismos primitivos ou letras aleatórias.',
             's': '<b>Silábico (S):</b> Descreve o aluno que já compreende que a escrita representa a fala e utiliza geralmente uma letra para representar cada sílaba.',
             's.a.': '<b>Silábico-Alfabético (S.A.):</b> Fase de transição onde o aluno alterna entre a escrita silábica e a escrita alfabética (completa) dentro da mesma palavra.',
@@ -902,11 +920,11 @@ def create_pdf_report(charts_data: Dict[str, Any], quant_trimestre: int, polo: s
             'o': '<b>Ortográfico (O):</b> Nível onde o aluno, além de ser alfabético, já domina as convenções ortográficas da língua (uso de RR, SS, Ç, acentuação, etc.).'
         }
 
-        # --- PÁGINA 1: PÁGINA DE ROSTO ---
-        # (O código da página de rosto continua o mesmo)
+        # --- PÁGINA 1: PÁGINA DE ROSTO (Portrait) ---
         story.append(Spacer(1, 1.5 * inch))
         story.append(Paragraph("RELATÓRIO DE LEITURA E ESCRITA", title_style))
         story.append(Spacer(1, 0.5 * inch))
+        
         if total_alunos_p2 is not None:
             story.append(Paragraph(f"ANÁLISE DO 1º & 2º PERÍODO", subtitle_style))
         else:
@@ -917,44 +935,45 @@ def create_pdf_report(charts_data: Dict[str, Any], quant_trimestre: int, polo: s
         story.append(Paragraph(f"<b>DATA DE EMISSÃO:</b> {datetime.now().strftime('%d/%m/%Y')}", normal_style_center))
         story.append(Spacer(1, 0.5 * inch))
         story.append(Paragraph(f"<b>TOTAL DE ALUNOS (1º Período):</b> {total_alunos_p1}", normal_style_center))
+        
         if total_alunos_p2 is not None:
             story.append(Paragraph(f"<b>TOTAL DE ALUNOS (2º Período):</b> {total_alunos_p2}", normal_style_center))
+        
+        # --- TROCA PARA PAISAGEM AQUI ---
+        story.append(NextPageTemplate('Landscape'))
         story.append(PageBreak())
 
-        # --- PÁGINAS SEGUINTES: GRÁFICOS ---
+        # --- PÁGINAS SEGUINTES: GRÁFICOS (Landscape) ---
         for chart_key, chart_info in charts_data.items():
             if not chart_info:
                 continue
 
             chart_block = []
             chart_block.append(Paragraph(f"<b>{chart_info['title']}</b>", subtitle_style))
-            chart_block.append(Spacer(1, 15))
+            chart_block.append(Spacer(1, 10))
             chart_block.append(Paragraph(chart_info['description'], normal_style_center))
-            chart_block.append(Spacer(1, 15))
+            chart_block.append(Spacer(1, 10))
 
             if os.path.exists(chart_info['path']):
-                img = Image(chart_info['path'], width=500, height=280)
+                # Imagem ampliada para preencher a folha paisagem
+                img = Image(chart_info['path'], width=680, height=350)
                 chart_block.append(img)
                 
-                # --- LÓGICA COMPLETA PARA ADICIONAR A DESCRIÇÃO DA MÉTRICA ---
+                # Procura a descrição correta da métrica
                 description_text = ""
-                # Itera sobre todas as chaves de métricas conhecidas
                 for metric_key in metric_descriptions.keys():
-                    # Checa se a chave do gráfico (ex: 'nl_fund1') começa com a chave da métrica (ex: 'nl')
                     if chart_key.startswith(metric_key):
                         description_text = metric_descriptions.get(metric_key)
-                        break # Para a busca assim que encontrar a correspondência
+                        break 
 
                 if description_text:
                     chart_block.append(Spacer(1, 10))
                     chart_block.append(Paragraph(description_text, caption_style))
-                # --- FIM DA LÓGICA ---
-
             else:
                 chart_block.append(Paragraph(f"<i>Gráfico não disponível: {chart_info['path']}</i>", styles['Italic']))
             
             story.append(KeepTogether(chart_block))
-            story.append(Spacer(1, 25))
+            story.append(Spacer(1, 20))
 
         print(f"🔍 DEBUG: Construindo PDF...")
         doc.build(story)

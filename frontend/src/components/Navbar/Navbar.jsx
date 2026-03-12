@@ -6,7 +6,7 @@ import "./Navbar.css";
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const { logout, isAuthenticated, user } = useAuth();
+  const { logout, isAuthenticated } = useAuth();
 
   const handleLogoClick = () => {
     navigate("../");
@@ -41,10 +41,18 @@ const Navbar = () => {
         </ul>
         {isAuthenticated ? (
           <>
-            <button className="logout_button" onClick={handleNewUser} aria-label="Cadastrar novo usuário">
+            <button
+              className="logout_button"
+              onClick={handleNewUser}
+              aria-label="Cadastrar novo usuário"
+            >
               Novo Usuário
             </button>
-            <button className="logout_button" onClick={handleLogout} aria-label="Sair">
+            <button
+              className="logout_button"
+              onClick={handleLogout}
+              aria-label="Sair"
+            >
               Sair
             </button>
           </>

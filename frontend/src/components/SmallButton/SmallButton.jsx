@@ -1,14 +1,22 @@
 import "./SmallButton.css";
 
-const SmallButton = ({ filled, description, onClick }) => {
+const SmallButton = ({ filled, description, onClick, disabled, isLoading }) => {
   return (
     <div className="small_button">
-      <a
-        onClick={() => onClick()}
+      <button
+        onClick={onClick}
         className={filled ? "filled" : "transparent"}
+        disabled={disabled || isLoading}
       >
-        {description}
-      </a>
+        {isLoading ? (
+          <>
+            <span className="spinner"></span>
+            Gerando...
+          </>
+        ) : (
+          description
+        )}
+      </button>
     </div>
   );
 };

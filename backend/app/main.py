@@ -6,7 +6,7 @@ import os
 import asyncio
 from datetime import datetime
 from app.operations import Operations
-from app.auth import router as auth_router
+from app.auth import router as auth_router, create_default_admin
 from app.database import init_db
 
 app = FastAPI(
@@ -38,6 +38,7 @@ op = Operations()
 async def startup_event():
     """Inicializa o banco de dados quando a aplicação inicia"""
     await init_db()
+    await create_default_admin()
 
 @app.get("/", response_class=HTMLResponse)
 async def root():

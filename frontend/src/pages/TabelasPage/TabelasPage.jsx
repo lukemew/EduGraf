@@ -26,7 +26,7 @@ const TabelasPage = () => {
     if (!selectedFile) {
       showError(
         "Arquivo não selecionado",
-        "Por favor, selecione um arquivo Excel (.xlsx) antes de continuar."
+        "Por favor, selecione um arquivo Excel (.xlsx) antes de continuar.",
       );
       return;
     }
@@ -57,7 +57,7 @@ const TabelasPage = () => {
             "Content-Type": "multipart/form-data",
           },
           responseType: "blob",
-        }
+        },
       );
 
       // Verificar se a resposta é válida
@@ -72,7 +72,7 @@ const TabelasPage = () => {
         "download",
         `tabela_${selectedPolo.replace(" ", "_")}_${new Date()
           .toISOString()
-          .slice(0, 10)}.xlsx`
+          .slice(0, 10)}.xlsx`,
       ); // Nome dinâmico para o download
       document.body.appendChild(link);
       link.click();
@@ -82,7 +82,7 @@ const TabelasPage = () => {
       // Mensagem de sucesso
       showSuccess(
         "📊 Tabela Gerada com Sucesso!",
-        `O download da tabela do ${selectedPolo} foi concluído.`
+        `O download da tabela do ${selectedPolo} foi concluído.`,
       );
     } catch (error) {
       console.error("Erro ao fazer upload:", error);
@@ -96,13 +96,22 @@ const TabelasPage = () => {
           if (errorText) {
             errorMessage = `Erro: ${errorText}`;
           }
-        } catch (e) {
-          // Se não conseguir ler o erro, usar mensagem padrão
-        }
+        } catch (e) {}
       }
 
       showError("❌ Erro ao Gerar Tabela", errorMessage);
     }
+  };
+
+  const handleDownloadTemplate = () => {
+    // O caminho '/' aponta diretamente para a pasta 'public'
+    const fileUrl = "/modelo-planilha-base.xlsx";
+    const link = document.createElement("a");
+    link.href = fileUrl;
+    link.setAttribute("download", "modelo-planilha-base.xlsx");
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode.removeChild(link);
   };
 
   return (
@@ -132,6 +141,14 @@ const TabelasPage = () => {
         </div>
         <h2>Exemplo de modelo da tabela:</h2>
         <img src={Tabela} alt="Pré visualização da tabela" />
+
+        <div>
+          <SmallButton
+            description={"Baixar Planilha Base"}
+            filled={false} // Deixei 'false' para ele ficar com o visual transparente/borda, dando contraste com o botão principal
+            onClick={handleDownloadTemplate}
+          />
+        </div>
       </main>
       <footer>
         <Tips pagina={2} />

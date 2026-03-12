@@ -32,6 +32,8 @@ services:
       - JWT_SECRET=b5a81466066ef1a14e208d750ab0cb1dd19cf30d7a6edffc03d251ca5b677131
       - JWT_ALGORITHM=HS256
       - JWT_EXPIRES_MINUTES=60
+      - ADMIN_EMAIL=edugraf@gmail.com
+      - ADMIN_PASSWORD=edugraf@bv
       - API_HOST=0.0.0.0
       - API_PORT=8000
       - DEBUG=True
@@ -62,7 +64,6 @@ services:
 
 volumes:
   pgdata:
-
 
 networks:
   edugraf-network:

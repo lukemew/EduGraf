@@ -7,6 +7,7 @@ import Tips from "../../components/Tips/Tips";
 import { useNotificationContext } from "../../contexts/NotificationContext";
 import { useState } from "react";
 import axios from "axios";
+import Tabela from "../../assets/tabela-exemplo.png";
 
 const GraficoPage = () => {
   // ESTADO PRINCIPAL: controla quantos campos de upload aparecem (1 ou 2)
@@ -14,6 +15,7 @@ const GraficoPage = () => {
   // MUDANÇA 1: O estado agora guarda uma LISTA (array) de arquivos
   const [selectedFiles, setSelectedFiles] = useState([]);
   const { showSuccess, showError } = useNotificationContext();
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleAmountChange = (e) => {
     const amount = parseInt(e.target.value, 10);
@@ -41,7 +43,7 @@ const GraficoPage = () => {
     ) {
       showError(
         "Arquivos Faltando",
-        `Por favor, selecione ${selectedAmount} arquivo(s) Excel.`
+        `Por favor, selecione ${selectedAmount} arquivo(s) Excel.`,
       );
       return;
     }
@@ -55,6 +57,8 @@ const GraficoPage = () => {
     });
     formData.append("tipo_processamento", "grafico");
 
+    setIsLoading(true);
+
     try {
       const response = await axios.post(
         "http://localhost:8000/upload",
@@ -62,7 +66,7 @@ const GraficoPage = () => {
         {
           headers: { "Content-Type": "multipart/form-data" },
           responseType: "blob",
-        }
+        },
       );
 
       // Lógica de download do PDF (continua igual)
@@ -71,7 +75,7 @@ const GraficoPage = () => {
       link.href = url;
       link.setAttribute(
         "download",
-        `relatorio_graficos_${new Date().toISOString().slice(0, 10)}.pdf`
+        `relatorio_graficos_${new Date().toISOString().slice(0, 10)}.pdf`,
       );
       document.body.appendChild(link);
       link.click();
@@ -80,12 +84,25 @@ const GraficoPage = () => {
 
       showSuccess(
         "📈 Relatório Gerado!",
-        "O PDF com os gráficos será baixado automaticamente."
+        "O PDF com os gráficos será baixado automaticamente.",
       );
     } catch (error) {
       console.error("Erro ao fazer upload:", error);
       showError("❌ Erro ao Gerar Relatório", "Ocorreu um erro no servidor.");
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const handleDownloadTemplate = () => {
+    // O caminho '/' aponta diretamente para a pasta 'public'
+    const fileUrl = "/modelo-planilha-base.xlsx";
+    const link = document.createElement("a");
+    link.href = fileUrl;
+    link.setAttribute("download", "modelo-planilha-base.xlsx");
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode.removeChild(link);
   };
 
   return (
@@ -110,12 +127,33 @@ const GraficoPage = () => {
                 />
               </div>
             ))}
-            <SmallButton
-              description={"Gerar gráfico"}
-              filled={true}
-              onClick={handleUpload}
-            />
+            <div
+              className="botao-gerar-container"
+              style={{
+                marginTop: "20px",
+                display: "flex",
+                justifyContent: "flex-start",
+              }}
+            >
+              <SmallButton
+                description={"Gerar gráfico"}
+                filled={true}
+                onClick={handleUpload}
+                disabled={isLoading}
+                isLoading={isLoading} /* Passando a nova prop para animar */
+              />
+            </div>
           </div>
+        </div>
+        <h2>Exemplo de modelo da tabela:</h2>
+        <img src={Tabela} alt="Pré visualização da tabela" />
+
+        <div>
+          <SmallButton
+            description={"Baixar Planilha Base"}
+            filled={false} // Deixei 'false' para ele ficar com o visual transparente/borda, dando contraste com o botão principal
+            onClick={handleDownloadTemplate}
+          />
         </div>
       </main>
       <footer>
